@@ -121,21 +121,15 @@ def bind_design(design: adsk.fusion.Design, project_name: str, root_folder: str)
         log_to_console(adsk.core.Application.get(), f"Bind Err: {e}")
 
 def get_context_for_design(design: adsk.fusion.Design) -> dict | None:
-    """Retrieves context using design attributes, Revision ID (Session GUID) or Name."""
+    """Retrieves context using design attributes or Name."""
     cfg = load_config()
     contexts = cfg.get("contexts", {})
     
-    # Attributes travel inside every exported .f3d, so they survive reopening and renames
+    # 1. Attributes travel inside every exported .f3d, so they survive reopening and renames
     try:
         attr = design.attributes.itemByName(ATTR_GROUP, "root")
         proj = read_project(attr.value) if attr else None
         if proj: return dict(proj, root=attr.value)
-    except: pass
-    
-    # 1. Try GUID (Most reliable for Untitled/Unsaved in-session)
-    try:
-        rev_id = design.rootComponent.revisionId
-        if rev_id in contexts: return contexts[rev_id]
     except: pass
     
     # 2. Try Name (Fallback for fresh open of saved files where GUID changed)
@@ -160,17 +154,8 @@ def get_context_for_design(design: adsk.fusion.Design) -> dict | None:
 def update_context_for_design(design: adsk.fusion.Design, project_name: str, root_folder: str, hash_val: str) -> None:
     """Updates context binding for a specific design."""
     cfg = load_config()
-    if "contexts" not in cfg: cfg["contexts"] = {}
-    
-    # Store by GUID
-    try:
-        rev_id = design.rootComponent.revisionId
-        cfg["contexts"][rev_id] = {
-            "root": root_folder,
-            "hash": hash_val,
-            "name": project_name
-        }
-    except: pass
+    # Drop old Revision ID keys: the ID changes on every edit, so they never match again
+    cfg["contexts"] = {k: v for k, v in cfg.get("contexts", {}).items() if k == v.get("name")}
     
     # We will store a secondary key if name is valid
     if project_name != "Untitled":
