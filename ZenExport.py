@@ -236,7 +236,7 @@ def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
     export_mgr = design.exportManager
     s, f = 0, 0
     for name, body in bodies:
-        fname = sanitize_filename(f"{name}_{body.name}.stl")
+        fname = sanitize_filename(f"{name}_{body.name}.stl" if name else f"{body.name}.stl")
         path = os.path.join(models_folder, fname)
         try:
             opts = export_mgr.createSTLExportOptions(body, path)
@@ -248,12 +248,12 @@ def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
 
 def collect_bodies(design) -> list:
     bodies = []
-    def traverse(comp, prefix=""):
-        name = prefix + comp.name if prefix else comp.name
+    def traverse(comp, name=""):
         for b in comp.bRepBodies:
             if b.isVisible: bodies.append((name, b))
         for occ in comp.occurrences:
-            if occ.isVisible: traverse(occ.component, f"{name}_" if name else "")
+            child = occ.component.name
+            if occ.isVisible: traverse(occ.component, f"{name}_{child}" if name else child)
     traverse(design.rootComponent)
     return bodies
 
