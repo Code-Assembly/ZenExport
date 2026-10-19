@@ -235,8 +235,16 @@ def export_cad_files(app, design, cad_folder, versioned_name) -> tuple[bool, boo
 def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
     export_mgr = design.exportManager
     s, f = 0, 0
+    used = set()
     for name, body in bodies:
-        fname = sanitize_filename(f"{name}_{body.name}.stl" if name else f"{body.name}.stl")
+        base = f"{name}_{body.name}" if name else body.name
+        fname = sanitize_filename(f"{base}.stl")
+        n = 2
+        # Lowercase: macOS and Windows filesystems ignore case
+        while fname.lower() in used:
+            fname = sanitize_filename(f"{base} ({n}).stl")
+            n += 1
+        used.add(fname.lower())
         path = os.path.join(models_folder, fname)
         try:
             opts = export_mgr.createSTLExportOptions(body, path)
@@ -248,13 +256,18 @@ def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
 
 def collect_bodies(design) -> list:
     bodies = []
-    def traverse(comp, name=""):
-        for b in comp.bRepBodies:
-            if b.isVisible: bodies.append((name, b))
-        for occ in comp.occurrences:
-            child = occ.component.name
-            if occ.isVisible: traverse(occ.component, f"{name}_{child}" if name else child)
-    traverse(design.rootComponent)
+    # Occurrence bodies are proxies in root context, so STLs keep their assembly position
+    def traverse(occs, prefix=""):
+        for occ in occs:
+            if not occ.isVisible: continue
+            name = f"{prefix}_{occ.component.name}" if prefix else occ.component.name
+            for b in occ.bRepBodies:
+                if b.isVisible: bodies.append((name, b))
+            traverse(occ.childOccurrences, name)
+    root = design.rootComponent
+    for b in root.bRepBodies:
+        if b.isVisible: bodies.append(("", b))
+    traverse(root.occurrences)
     return bodies
 
 def perform_sync_export(app, design, project_folder, project_name) -> dict:
