@@ -29,6 +29,7 @@ CMD_DESC = "Saves versioned backup locally (Ctrl+S override)."
 ResourcesFolder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
 CONFIG_FILENAME = "session_config.json"
 MESH_REFINEMENT = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
+LOG_MAX_BYTES = 512 * 1024
 
 # Global Event Handlers
 _handlers = []
@@ -38,7 +39,7 @@ _handlers = []
 # ============================================================================
 
 def get_log_path() -> str:
-    return os.path.join(os.path.expanduser("~"), "Desktop", "zenexport_debug.log")
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "zenexport_debug.log")
 
 def log_to_console(app: adsk.core.Application, message: str) -> None:
     try:
@@ -48,7 +49,11 @@ def log_to_console(app: adsk.core.Application, message: str) -> None:
     except: pass
 
     try:
-        with open(get_log_path(), "a", encoding="utf-8") as f:
+        path = get_log_path()
+        # Keep one previous log, so both files together stay near 2x LOG_MAX_BYTES
+        if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
+            os.replace(path, path + ".old")
+        with open(path, "a", encoding="utf-8") as f:
             from datetime import datetime
             timestamp = datetime.now().strftime("%H:%M:%S")
             f.write(f"[{timestamp}] {message}\n")
