@@ -18,6 +18,7 @@ import os
 import json
 import re
 import glob
+import hashlib
 
 # ============================================================================
 # CONSTANTS & GLOBALS
@@ -177,12 +178,24 @@ def get_next_version_number(cad_folder: str) -> int:
 
 def get_design_hash(design: adsk.fusion.Design) -> str:
     try:
-        tl_count = design.timeline.count
-        tl_pos = design.timeline.markerPosition
-        comp_count = design.rootComponent.allOccurrences.count
-        param_count = len(design.userParameters)
-        body_count = sum(1 for _ in design.rootComponent.bRepBodies)
-        return f"{tl_count}|{tl_pos}|{comp_count}|{param_count}|{body_count}"
+        h = hashlib.sha1()
+        def add(*vals):
+            h.update(("|".join(str(v) for v in vals) + "\n").encode("utf-8"))
+
+        # Direct-modelling designs have no timeline
+        if design.designType == adsk.fusion.DesignTypes.ParametricDesignType:
+            tl = design.timeline
+            add(tl.count, tl.markerPosition)
+            for i in range(tl.count):
+                item = tl.item(i)
+                add(item.name, item.isSuppressed)
+        for p in design.allParameters:
+            add(p.name, p.expression, round(p.value, 6))
+        for comp in design.allComponents:
+            for b in comp.bRepBodies:
+                add(comp.name, b.name, b.isVisible, round(b.volume, 6), round(b.area, 6), b.vertices.count)
+        add(design.rootComponent.allOccurrences.count)
+        return h.hexdigest()
     except:
         return "ERROR"
 
@@ -334,8 +347,10 @@ def run_zen_export_logic(app, design, mode_override=None):
     # 3. Dirty Flag Check (Only for Updates)
     if mode == "UPDATE":
         if current_hash == last_hash:
-            ui.messageBox("No changes detected since last ZenExport.\nSave Skipped.", "ZenExport")
-            return
+            answer = ui.messageBox("No changes detected since last ZenExport.\nSave a new version anyway?", "ZenExport",
+                                   adsk.core.MessageBoxButtonTypes.YesNoButtonType,
+                                   adsk.core.MessageBoxIconTypes.QuestionIconType)
+            if answer != adsk.core.DialogResults.DialogYes: return
 
     # 4. INITIALIZATION (New / Lost Context)
     if mode == "INIT":
