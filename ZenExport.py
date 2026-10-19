@@ -20,6 +20,7 @@ import re
 import sys
 import subprocess
 import hashlib
+from datetime import datetime
 
 # ============================================================================
 # CONSTANTS & GLOBALS
@@ -28,7 +29,8 @@ import hashlib
 CMD_ID = "ZenExport_Cmd_v5" # Updated ID to force refresh
 CMD_NAME = "ZenExport Save"
 CMD_DESC = "Saves versioned backup locally (Ctrl+S override)."
-ResourcesFolder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
+ADDIN_DIR = os.path.dirname(os.path.realpath(__file__))
+ResourcesFolder = os.path.join(ADDIN_DIR, "resources")
 CONFIG_FILENAME = "session_config.json"
 PROJECT_FILENAME = "zenexport.json"
 ATTR_GROUP = "ZenExport"
@@ -38,6 +40,7 @@ LOG_CMD_ID = "ZenExport_DebugLog"
 LOG_CMD_NAME = "ZenExport Debug Log"
 LOG_CMD_DESC = "Writes zenexport_debug.log next to the add-in."
 ADDINS_PANEL_ID = "SolidScriptsAddinsPanel" # Utilities > Add-Ins
+SAVE_CMDS = {"PLM360SaveCommand", "FusionSaveCommand", "FileSave", "Save"}
 
 # Global Event Handlers
 _handlers = []
@@ -48,7 +51,7 @@ _debug_log = False
 # ============================================================================
 
 def get_log_path() -> str:
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "zenexport_debug.log")
+    return os.path.join(ADDIN_DIR, "zenexport_debug.log")
 
 def log_to_console(app: adsk.core.Application, message: str) -> None:
     try:
@@ -64,7 +67,6 @@ def log_to_console(app: adsk.core.Application, message: str) -> None:
         if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
             os.replace(path, path + ".old")
         with open(path, "a", encoding="utf-8") as f:
-            from datetime import datetime
             timestamp = datetime.now().strftime("%H:%M:%S")
             f.write(f"[{timestamp}] {message}\n")
     except: pass
@@ -74,8 +76,7 @@ def log_to_console(app: adsk.core.Application, message: str) -> None:
 # ============================================================================
 
 def get_config_path() -> str:
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(script_dir, CONFIG_FILENAME)
+    return os.path.join(ADDIN_DIR, CONFIG_FILENAME)
 
 def load_config() -> dict:
     path = get_config_path()
@@ -131,24 +132,11 @@ def get_context_for_design(design: adsk.fusion.Design) -> dict | None:
         if proj: return dict(proj, root=attr.value)
     except: pass
     
-    # 2. Try Name (Fallback for fresh open of saved files where GUID changed)
+    # 2. Try Name (Fallback for fresh open of saved files)
     try:
-        full_name = design.parentDocument.name
-        # Regex to strip version suffix like _v01, _v1,  v01,  v1
-        # Captures "MyProject" from "MyProject_v05" or "MyProject v5"
-        match = re.search(r'^(.*?)[\s_]v\d+$', full_name, re.IGNORECASE)
-        if match:
-             name_key = sanitize_filename(match.group(1))
-        else:
-             name_key = sanitize_filename(full_name)
-             
-        # Debug Log (checking regex capture)
-        if match: log_to_console(adsk.core.Application.get(), f"Parsed Key: {name_key}")
-             
+        return contexts.get(base_design_name(design.parentDocument.name))
     except:
         return None
-        
-    return contexts.get(name_key)
 
 def update_context_for_design(design: adsk.fusion.Design, project_name: str, root_folder: str, hash_val: str) -> None:
     """Updates context binding for a specific design."""
@@ -173,6 +161,11 @@ def update_context_for_design(design: adsk.fusion.Design, project_name: str, roo
 # UTILS & VERSIONING
 # ============================================================================
 
+def base_design_name(full_name: str) -> str:
+    # Strips version suffixes: "MyProject_v05" or "MyProject v5" -> "MyProject"
+    match = re.search(r'^(.*?)[\s_]v\d+$', full_name, re.IGNORECASE)
+    return sanitize_filename(match.group(1) if match else full_name)
+
 def sanitize_filename(name: str) -> str:
     invalid = '<>:"/\\|?*'
     for char in invalid:
@@ -180,6 +173,7 @@ def sanitize_filename(name: str) -> str:
     return name
 
 def is_shift_held() -> bool:
+    if sys.platform != "win32": return False
     try:
         import ctypes
         return bool(ctypes.windll.user32.GetAsyncKeyState(0x10) & 0x8000)
@@ -350,8 +344,7 @@ def perform_sync_export(app, design, project_folder, project_name, note="") -> d
     stl_s, stl_f = 0, 0
     if bodies: stl_s, stl_f = export_stl_files(app, design, bodies, models_folder)
     
-    # Returning plain dict (NO F3D PATH needed since no Auto-Swap)
-    return {'f3d': f3d, 'step': step, 'stl_ok': stl_s, 'stl_fail': stl_f, 'version': versioned_name, 'proj_root': project_folder}
+    return {'f3d': f3d, 'step': step, 'stl_ok': stl_s, 'stl_fail': stl_f, 'version': versioned_name}
 
 # ============================================================================
 # CORE LOGIC
@@ -365,13 +358,7 @@ def run_zen_export_logic(app, design, mode_override=None):
     # We allow "Untitled" or unsaved files to proceed to INIT mode.
     # The user wants to "Save" them via ZenExport.
     
-    full_name = doc.name
-    # Strict Name Parsing via Regex (Handles " Name v1" and "Name_v01")
-    match = re.search(r'^(.*?)[\s_]v\d+$', full_name, re.IGNORECASE)
-    if match:
-        design_name = sanitize_filename(match.group(1))
-    else:
-        design_name = sanitize_filename(full_name)
+    design_name = base_design_name(doc.name)
     
     # If Untitled, we handle in INIT flow
     
@@ -479,16 +466,14 @@ def run_zen_export_logic(app, design, mode_override=None):
 class ZenExportCommandStartingHandler(adsk.core.ApplicationCommandEventHandler):
     def __init__(self): super().__init__()
     def notify(self, args):
+        # Fires for every Fusion command, so bail out before touching the API
+        if args.commandId not in SAVE_CMDS: return
+        app = adsk.core.Application.get()
         try:
-            cmd_id = args.commandId
-            app = adsk.core.Application.get()
-            TARGET_CMDS = ["PLM360SaveCommand", "FusionSaveCommand", "FileSave", "Save"]
-            
-            if cmd_id in TARGET_CMDS:
-                log_to_console(app, f"🚫 Intercepted: {cmd_id}")
-                args.isCanceled = True
-                design = adsk.fusion.Design.cast(app.activeProduct)
-                if design: run_zen_export_logic(app, design)
+            log_to_console(app, f"🚫 Intercepted: {args.commandId}")
+            args.isCanceled = True
+            design = adsk.fusion.Design.cast(app.activeProduct)
+            if design: run_zen_export_logic(app, design)
         except Exception as e:
             log_to_console(app, f"Interceptor Err: {e}")
 
