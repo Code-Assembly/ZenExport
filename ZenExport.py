@@ -30,9 +30,14 @@ ResourcesFolder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "res
 CONFIG_FILENAME = "session_config.json"
 MESH_REFINEMENT = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
 LOG_MAX_BYTES = 512 * 1024
+LOG_CMD_ID = "ZenExport_DebugLog"
+LOG_CMD_NAME = "ZenExport Debug Log"
+LOG_CMD_DESC = "Writes zenexport_debug.log next to the add-in."
+ADDINS_PANEL_ID = "SolidScriptsAddinsPanel" # Utilities > Add-Ins
 
 # Global Event Handlers
 _handlers = []
+_debug_log = False
 
 # ============================================================================
 # LOGGING HELPER
@@ -48,6 +53,7 @@ def log_to_console(app: adsk.core.Application, message: str) -> None:
             text_palette.writeText(f"[ZenExport] {message}")
     except: pass
 
+    if not _debug_log: return
     try:
         path = get_log_path()
         # Keep one previous log, so both files together stay near 2x LOG_MAX_BYTES
@@ -418,6 +424,27 @@ class ZenExportExecuteHandler(adsk.core.CommandEventHandler):
             if design: run_zen_export_logic(app, design)
         except: pass
 
+class ZenExportLogCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    def __init__(self): super().__init__()
+    def notify(self, args):
+        try:
+            onExecute = ZenExportLogExecuteHandler()
+            args.command.execute.add(onExecute)
+            _handlers.append(onExecute)
+        except: pass
+
+class ZenExportLogExecuteHandler(adsk.core.CommandEventHandler):
+    def __init__(self): super().__init__()
+    def notify(self, args):
+        global _debug_log
+        try:
+            _debug_log = args.command.parentCommandDefinition.controlDefinition.isChecked
+            cfg = load_config()
+            cfg["debug_log"] = _debug_log
+            save_config_file(cfg)
+            log_to_console(adsk.core.Application.get(), f"Debug log {'on' if _debug_log else 'off'}: {get_log_path()}")
+        except: pass
+
 class ZenExportDocumentActivatedHandler(adsk.core.DocumentEventHandler):
     def __init__(self): super().__init__()
     def notify(self, args):
@@ -427,8 +454,17 @@ class ZenExportDocumentActivatedHandler(adsk.core.DocumentEventHandler):
 # MAIN
 # ============================================================================
 
+def remove_log_toggle(ui) -> None:
+    panel = ui.allToolbarPanels.itemById(ADDINS_PANEL_ID)
+    control = panel.controls.itemById(LOG_CMD_ID) if panel else None
+    if control: control.deleteMe()
+    logDef = ui.commandDefinitions.itemById(LOG_CMD_ID)
+    if logDef: logDef.deleteMe()
+
 def run(context):
+    global _debug_log
     try:
+        _debug_log = load_config().get("debug_log", False)
         app = adsk.core.Application.get()
         ui = app.userInterface
         log_to_console(app, "ZenExport Starting...")
@@ -455,6 +491,14 @@ def run(context):
         app.documentActivated.add(onActivated)
         _handlers.append(onActivated)
         
+        remove_log_toggle(ui)
+        logDef = ui.commandDefinitions.addCheckBoxDefinition(LOG_CMD_ID, LOG_CMD_NAME, LOG_CMD_DESC, _debug_log)
+        onLogCreated = ZenExportLogCreatedHandler()
+        logDef.commandCreated.add(onLogCreated)
+        _handlers.append(onLogCreated)
+        panel = ui.allToolbarPanels.itemById(ADDINS_PANEL_ID)
+        if panel: panel.controls.addCommand(logDef)
+        
         log_to_console(app, "ZenExport Ready.")
         
     except:
@@ -468,5 +512,6 @@ def stop(context):
         if app.userInterface:
             cmdDef = app.userInterface.commandDefinitions.itemById(CMD_ID)
             if cmdDef: cmdDef.deleteMe()
+            remove_log_toggle(app.userInterface)
         log_to_console(app, "ZenExport Stopped.")
     except: pass
