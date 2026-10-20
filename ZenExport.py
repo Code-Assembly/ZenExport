@@ -461,6 +461,12 @@ def run_zen_export_logic(app, design, mode_override=None):
     update_context_for_design(design, project_name, project_folder, current_hash)
     
     # 7. FEEDBACK & AUTO-OPEN
+    if not res['f3d'] and not res['step']:
+        ui.messageBox(f"ZenExport failed: no .f3d or .step written for {res['version']}.\nSee the Text Commands panel for the error.",
+                      "ZenExport", adsk.core.MessageBoxButtonTypes.OKButtonType,
+                      adsk.core.MessageBoxIconTypes.CriticalIconType)
+        return
+
     try: open_folder(project_folder)
     except: pass
          
