@@ -18,6 +18,8 @@ import os
 import json
 import re
 import glob
+import sys
+import subprocess
 import hashlib
 
 # ============================================================================
@@ -153,6 +155,12 @@ def is_shift_held() -> bool:
         return bool(ctypes.windll.user32.GetAsyncKeyState(0x10) & 0x8000)
     except:
         return False
+
+def open_folder(path: str) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["open", path])
+    else:
+        os.startfile(path)
 
 def ensure_folder_exists(app: adsk.core.Application, folder_path: str) -> None:
     if not os.path.exists(folder_path):
@@ -409,7 +417,7 @@ def run_zen_export_logic(app, design, mode_override=None):
     update_context_for_design(design, project_name, project_folder, current_hash)
     
     # 7. FEEDBACK & AUTO-OPEN
-    try: os.startfile(project_folder)
+    try: open_folder(project_folder)
     except: pass
          
     show_success_feedback(ui, mode, res, project_folder)
