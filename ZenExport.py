@@ -20,6 +20,7 @@ import re
 import glob
 import sys
 import subprocess
+import hashlib
 
 # ============================================================================
 # CONSTANTS & GLOBALS
@@ -185,12 +186,24 @@ def get_next_version_number(cad_folder: str) -> int:
 
 def get_design_hash(design: adsk.fusion.Design) -> str:
     try:
-        tl_count = design.timeline.count
-        tl_pos = design.timeline.markerPosition
-        comp_count = design.rootComponent.allOccurrences.count
-        param_count = len(design.userParameters)
-        body_count = sum(1 for _ in design.rootComponent.bRepBodies)
-        return f"{tl_count}|{tl_pos}|{comp_count}|{param_count}|{body_count}"
+        h = hashlib.sha1()
+        def add(*vals):
+            h.update(("|".join(str(v) for v in vals) + "\n").encode("utf-8"))
+
+        # Direct-modelling designs have no timeline
+        if design.designType == adsk.fusion.DesignTypes.ParametricDesignType:
+            tl = design.timeline
+            add(tl.count, tl.markerPosition)
+            for i in range(tl.count):
+                item = tl.item(i)
+                add(item.name, item.isSuppressed)
+        for p in design.allParameters:
+            add(p.name, p.expression, round(p.value, 6))
+        for comp in design.allComponents:
+            for b in comp.bRepBodies:
+                add(comp.name, b.name, b.isVisible, round(b.volume, 6), round(b.area, 6), b.vertices.count)
+        add(design.rootComponent.allOccurrences.count)
+        return h.hexdigest()
     except:
         return "ERROR"
 
@@ -220,6 +233,15 @@ def save_thumbnail(app: adsk.core.Application, folder: str) -> bool:
     except:
         return False
 
+def write_note(app, folder: str, note: str) -> None:
+    fname = sanitize_filename(note).strip(" .")[:100].rstrip(" .")
+    if not fname: return
+    try:
+        with open(os.path.join(folder, f"{fname}.txt"), "w", encoding="utf-8") as f:
+            f.write(note.strip())
+    except Exception as e:
+        log_to_console(app, f"Note Err: {e}")
+
 def export_cad_files(app, design, cad_folder, versioned_name) -> tuple[bool, bool]:
     export_mgr = design.exportManager
     f3d_path = os.path.join(cad_folder, f"{versioned_name}.f3d")
@@ -243,8 +265,16 @@ def export_cad_files(app, design, cad_folder, versioned_name) -> tuple[bool, boo
 def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
     export_mgr = design.exportManager
     s, f = 0, 0
+    used = set()
     for name, body in bodies:
-        fname = sanitize_filename(f"{name}_{body.name}.stl")
+        base = f"{name}_{body.name}" if name else body.name
+        fname = sanitize_filename(f"{base}.stl")
+        n = 2
+        # Lowercase: macOS and Windows filesystems ignore case
+        while fname.lower() in used:
+            fname = sanitize_filename(f"{base} ({n}).stl")
+            n += 1
+        used.add(fname.lower())
         path = os.path.join(models_folder, fname)
         try:
             opts = export_mgr.createSTLExportOptions(body, path)
@@ -256,16 +286,21 @@ def export_stl_files(app, design, bodies, models_folder) -> tuple[int, int]:
 
 def collect_bodies(design) -> list:
     bodies = []
-    def traverse(comp, prefix=""):
-        name = prefix + comp.name if prefix else comp.name
-        for b in comp.bRepBodies:
-            if b.isVisible: bodies.append((name, b))
-        for occ in comp.occurrences:
-            if occ.isVisible: traverse(occ.component, f"{name}_" if name else "")
-    traverse(design.rootComponent)
+    # Occurrence bodies are proxies in root context, so STLs keep their assembly position
+    def traverse(occs, prefix=""):
+        for occ in occs:
+            if not occ.isVisible: continue
+            name = f"{prefix}_{occ.component.name}" if prefix else occ.component.name
+            for b in occ.bRepBodies:
+                if b.isVisible: bodies.append((name, b))
+            traverse(occ.childOccurrences, name)
+    root = design.rootComponent
+    for b in root.bRepBodies:
+        if b.isVisible: bodies.append(("", b))
+    traverse(root.occurrences)
     return bodies
 
-def perform_sync_export(app, design, project_folder, project_name) -> dict:
+def perform_sync_export(app, design, project_folder, project_name, note="") -> dict:
     cad_folder = os.path.join(project_folder, "CAD")
     models_folder = os.path.join(project_folder, "Models")
     ensure_folder_exists(app, cad_folder)
@@ -280,6 +315,7 @@ def perform_sync_export(app, design, project_folder, project_name) -> dict:
     ensure_folder_exists(app, target_cad)
     
     f3d, step = export_cad_files(app, design, target_cad, versioned_name)
+    write_note(app, target_cad, note)
     bodies = collect_bodies(design)
     stl_s, stl_f = 0, 0
     if bodies: stl_s, stl_f = export_stl_files(app, design, bodies, models_folder)
@@ -342,8 +378,10 @@ def run_zen_export_logic(app, design, mode_override=None):
     # 3. Dirty Flag Check (Only for Updates)
     if mode == "UPDATE":
         if current_hash == last_hash:
-            ui.messageBox("No changes detected since last ZenExport.\nSave Skipped.", "ZenExport")
-            return
+            answer = ui.messageBox("No changes detected since last ZenExport.\nSave a new version anyway?", "ZenExport",
+                                   adsk.core.MessageBoxButtonTypes.YesNoButtonType,
+                                   adsk.core.MessageBoxIconTypes.QuestionIconType)
+            if answer != adsk.core.DialogResults.DialogYes: return
 
     # 4. INITIALIZATION (New / Lost Context)
     if mode == "INIT":
@@ -368,8 +406,12 @@ def run_zen_export_logic(app, design, mode_override=None):
         if os.path.exists(project_folder):
              log_to_console(app, "Adopting existing folder structure.")
 
+    # 4b. VERSION NOTE (Cancel aborts the save)
+    note_res = ui.inputBox("Version note (optional):", "ZenExport", "")
+    if note_res[1]: return
+
     # 5. EXECUTION
-    res = perform_sync_export(app, design, project_folder, project_name)
+    res = perform_sync_export(app, design, project_folder, project_name, note_res[0])
     
     # 6. CONTEXT BINDING (Update Record)
     update_context_for_design(design, project_name, project_folder, current_hash)
