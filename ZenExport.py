@@ -31,6 +31,8 @@ CMD_NAME = "ZenExport Save"
 CMD_DESC = "Saves versioned backup locally (Ctrl+S override)."
 ResourcesFolder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
 CONFIG_FILENAME = "session_config.json"
+PROJECT_FILENAME = "zenexport.json"
+ATTR_GROUP = "ZenExport"
 MESH_REFINEMENT = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
 LOG_MAX_BYTES = 512 * 1024
 LOG_CMD_ID = "ZenExport_DebugLog"
@@ -92,15 +94,42 @@ def save_config_file(data: dict) -> None:
             json.dump(data, f, indent=4)
     except: pass
 
+def read_project(folder: str) -> dict | None:
+    path = os.path.join(folder, PROJECT_FILENAME)
+    if not os.path.exists(path): return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return None
+
+def write_project(folder: str, name: str, hash_val: str) -> None:
+    try:
+        with open(os.path.join(folder, PROJECT_FILENAME), 'w', encoding='utf-8') as f:
+            json.dump({"name": name, "hash": hash_val}, f, indent=4)
+    except Exception as e:
+        log_to_console(adsk.core.Application.get(), f"Project File Err: {e}")
+
+def bind_design(design: adsk.fusion.Design, project_name: str, root_folder: str) -> None:
+    try:
+        design.attributes.add(ATTR_GROUP, "root", root_folder)
+        design.attributes.add(ATTR_GROUP, "name", project_name)
+        # Fusion only allows renaming before the first cloud save
+        doc = design.parentDocument
+        if not doc.isSaved and doc.name != project_name: doc.name = project_name
+    except Exception as e:
+        log_to_console(adsk.core.Application.get(), f"Bind Err: {e}")
+
 def get_context_for_design(design: adsk.fusion.Design) -> dict | None:
-    """Retrieves context using Revision ID (Session GUID) or Name."""
+    """Retrieves context using design attributes or Name."""
     cfg = load_config()
     contexts = cfg.get("contexts", {})
     
-    # 1. Try GUID (Most reliable for Untitled/Unsaved in-session)
+    # 1. Attributes travel inside every exported .f3d, so they survive reopening and renames
     try:
-        rev_id = design.rootComponent.revisionId
-        if rev_id in contexts: return contexts[rev_id]
+        attr = design.attributes.itemByName(ATTR_GROUP, "root")
+        proj = read_project(attr.value) if attr else None
+        if proj: return dict(proj, root=attr.value)
     except: pass
     
     # 2. Try Name (Fallback for fresh open of saved files where GUID changed)
@@ -125,17 +154,8 @@ def get_context_for_design(design: adsk.fusion.Design) -> dict | None:
 def update_context_for_design(design: adsk.fusion.Design, project_name: str, root_folder: str, hash_val: str) -> None:
     """Updates context binding for a specific design."""
     cfg = load_config()
-    if "contexts" not in cfg: cfg["contexts"] = {}
-    
-    # Store by GUID
-    try:
-        rev_id = design.rootComponent.revisionId
-        cfg["contexts"][rev_id] = {
-            "root": root_folder,
-            "hash": hash_val,
-            "name": project_name
-        }
-    except: pass
+    # Drop old Revision ID keys: the ID changes on every edit, so they never match again
+    cfg["contexts"] = {k: v for k, v in cfg.get("contexts", {}).items() if k == v.get("name")}
     
     # We will store a secondary key if name is valid
     if project_name != "Untitled":
@@ -401,30 +421,43 @@ def run_zen_export_logic(app, design, mode_override=None):
         dlg.title = f"ZenExport: Select Location for '{design_name}'"
         if dlg.showDialog() != adsk.core.DialogResults.DialogOK: return
         base_dir = dlg.folder
-        
-        # Determine Project Name (Default to Design Name)
-        # If Untitled, default to MyProduct or empty
-        def_name = design_name if design_name != "Untitled" else "MyProduct"
-        
-        res = ui.inputBox("Confirm Project Folder Name:", "ZenExport Setup", def_name)
-        if res[1]: return 
-        project_name = sanitize_filename(res[0])
-        if not project_name: return 
-        
-        project_folder = os.path.join(base_dir, project_name)
-        
-        # Check if we are "adopting" an existing folder
-        if os.path.exists(project_folder):
-             log_to_console(app, "Adopting existing folder structure.")
+
+        # Picked a project folder itself: adopt it without asking for a name
+        proj = read_project(base_dir)
+        if proj:
+            project_folder = base_dir
+            project_name = proj.get("name") or sanitize_filename(os.path.basename(base_dir))
+            log_to_console(app, f"Adopting project: {project_folder}")
+        else:
+            # Determine Project Name (Default to Design Name)
+            # If Untitled, default to MyProduct or empty
+            def_name = design_name if design_name not in ("Untitled", "(Unsaved)") else "MyProduct"
+
+            res = ui.inputBox("Confirm Project Folder Name:", "ZenExport Setup", def_name)
+            if res[1]: return
+            project_name = sanitize_filename(res[0])
+            if not project_name: return
+
+            project_folder = os.path.join(base_dir, project_name)
+
+            # Check if we are "adopting" an existing folder
+            proj = read_project(project_folder)
+            if proj:
+                project_name = proj.get("name") or project_name
+                log_to_console(app, f"Adopting project: {project_folder}")
+            elif os.path.exists(project_folder):
+                 log_to_console(app, "Adopting existing folder structure.")
 
     # 4b. VERSION NOTE (Cancel aborts the save)
     note_res = ui.inputBox("Version note (optional):", "ZenExport", "")
     if note_res[1]: return
 
-    # 5. EXECUTION
+    # 5. EXECUTION (bind first so the attributes are saved into the exported .f3d)
+    bind_design(design, project_name, project_folder)
     res = perform_sync_export(app, design, project_folder, project_name, note_res[0])
     
     # 6. CONTEXT BINDING (Update Record)
+    if res['f3d']: write_project(project_folder, project_name, current_hash)
     update_context_for_design(design, project_name, project_folder, current_hash)
     
     # 7. FEEDBACK & AUTO-OPEN
