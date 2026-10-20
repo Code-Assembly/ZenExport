@@ -97,8 +97,15 @@ MyProject/
 └── zenexport.json
 ```
 
-- `Models/` always holds the latest mesh of each visible body. Bodies in components are prefixed with the component name.
+- `Models/` always holds the latest mesh of each visible body, exported where it sits in the assembly. Bodies in components are prefixed with the component name, and repeated copies get ` (2)`, ` (3)`...
 - `zenexport.json` marks the folder as a ZenExport project. Don't delete it.
+
+---
+
+## ⚙️ Settings
+
+- 🪵 **Debug Log:** Tick **Utilities > Add-Ins > ZenExport Debug Log** to write `zenexport_debug.log` next to `ZenExport.py`. Off by default. It's capped at 512 KB, with one `.old` copy kept. Messages always appear in the **Text Commands** panel either way.
+- _Settings are stored per machine in `session_config.json` next to the add-in._
 
 ---
 
