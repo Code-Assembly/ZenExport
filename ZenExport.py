@@ -17,7 +17,6 @@ import traceback
 import os
 import json
 import re
-import glob
 import sys
 import subprocess
 import hashlib
@@ -534,11 +533,6 @@ class ZenExportLogExecuteHandler(adsk.core.CommandEventHandler):
             log_to_console(adsk.core.Application.get(), f"Debug log {'on' if _debug_log else 'off'}: {get_log_path()}")
         except: pass
 
-class ZenExportDocumentActivatedHandler(adsk.core.DocumentEventHandler):
-    def __init__(self): super().__init__()
-    def notify(self, args):
-        pass
-
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -566,7 +560,6 @@ def run(context):
             except: pass
             
         cmdDef = ui.commandDefinitions.addButtonDefinition(CMD_ID, CMD_NAME, CMD_DESC, ResourcesFolder)
-        cmdDef.hotKey = "Ctrl+S"
         
         onCreated = ZenExportCommandCreatedHandler()
         cmdDef.commandCreated.add(onCreated) 
@@ -575,10 +568,6 @@ def run(context):
         onStarting = ZenExportCommandStartingHandler()
         ui.commandStarting.add(onStarting)
         _handlers.append(onStarting)
-        
-        onActivated = ZenExportDocumentActivatedHandler()
-        app.documentActivated.add(onActivated)
-        _handlers.append(onActivated)
         
         remove_log_toggle(ui)
         logDef = ui.commandDefinitions.addCheckBoxDefinition(LOG_CMD_ID, LOG_CMD_NAME, LOG_CMD_DESC, _debug_log)
