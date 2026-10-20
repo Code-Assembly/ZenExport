@@ -225,6 +225,15 @@ def save_thumbnail(app: adsk.core.Application, folder: str) -> bool:
     except:
         return False
 
+def write_note(app, folder: str, note: str) -> None:
+    fname = sanitize_filename(note).strip(" .")[:100].rstrip(" .")
+    if not fname: return
+    try:
+        with open(os.path.join(folder, f"{fname}.txt"), "w", encoding="utf-8") as f:
+            f.write(note.strip())
+    except Exception as e:
+        log_to_console(app, f"Note Err: {e}")
+
 def export_cad_files(app, design, cad_folder, versioned_name) -> tuple[bool, bool]:
     export_mgr = design.exportManager
     f3d_path = os.path.join(cad_folder, f"{versioned_name}.f3d")
@@ -270,7 +279,7 @@ def collect_bodies(design) -> list:
     traverse(design.rootComponent)
     return bodies
 
-def perform_sync_export(app, design, project_folder, project_name) -> dict:
+def perform_sync_export(app, design, project_folder, project_name, note="") -> dict:
     cad_folder = os.path.join(project_folder, "CAD")
     models_folder = os.path.join(project_folder, "Models")
     ensure_folder_exists(app, cad_folder)
@@ -285,6 +294,7 @@ def perform_sync_export(app, design, project_folder, project_name) -> dict:
     ensure_folder_exists(app, target_cad)
     
     f3d, step = export_cad_files(app, design, target_cad, versioned_name)
+    write_note(app, target_cad, note)
     bodies = collect_bodies(design)
     stl_s, stl_f = 0, 0
     if bodies: stl_s, stl_f = export_stl_files(app, design, bodies, models_folder)
@@ -375,8 +385,12 @@ def run_zen_export_logic(app, design, mode_override=None):
         if os.path.exists(project_folder):
              log_to_console(app, "Adopting existing folder structure.")
 
+    # 4b. VERSION NOTE (Cancel aborts the save)
+    note_res = ui.inputBox("Version note (optional):", "ZenExport", "")
+    if note_res[1]: return
+
     # 5. EXECUTION
-    res = perform_sync_export(app, design, project_folder, project_name)
+    res = perform_sync_export(app, design, project_folder, project_name, note_res[0])
     
     # 6. CONTEXT BINDING (Update Record)
     update_context_for_design(design, project_name, project_folder, current_hash)
