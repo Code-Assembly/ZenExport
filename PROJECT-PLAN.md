@@ -41,6 +41,9 @@ verified. Detailed findings are in `.agent/knowledge/architecture.md`.
 - [x] Document migration, output layout changes, limitations, and acceptance procedure.
 - [x] Publish all source changes and the 6.1.1 preview ZIP with MIT license and checksum.
 - [x] Correct test path comparisons for Windows short-name aliases found by the first CI run.
+- [x] Confirm corrected CI succeeds on Windows with Python 3.10 and 3.13 (run 40033840353).
+- [x] Share the preview on three permitted Reddit communities and record verified
+      URLs and publication limits in PUBLICATION_LOG.md.
 
 ## Required validation outside automated mocks
 
@@ -53,7 +56,6 @@ verified. Detailed findings are in `.agent/knowledge/architecture.md`.
 - [ ] Verify two Untitled tabs, repeated/hidden components, cancellation, and recovery.
 - [ ] Measure per-format performance on representative small/medium/large projects.
 - [ ] Compile, sign if required, and install/upgrade/uninstall the optional MSI.
-- [ ] Confirm the corrected Windows CI run succeeds on Python 3.10 and 3.13.
 
 ## Prioritized backlog
 

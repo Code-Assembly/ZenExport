@@ -30,7 +30,9 @@ before starting this one. The ZIP README contains the full instructions.
 ## Verification and limits
 
 63 automated tests pass locally. Lint, bytecode compilation, and deterministic ZIP
-packaging pass. Earlier 6.0.3/6.1.0 exports succeeded in the local Fusion session.
+packaging pass. [Windows CI on the main branch](https://github.com/EsKay-Labs/ZenExport/actions/runs/40033840353)
+also passes on Python 3.10 and 3.13 after correcting test-only path-alias and keyboard-state
+assumptions; the released runtime files are unchanged. Earlier 6.0.3/6.1.0 exports succeeded in the local Fusion session.
 The final 6.1.1 save workflow and recovery by reopening F3D/STEP still need live
 validation. macOS and MSI installation have not been verified; no MSI is supplied.
 
