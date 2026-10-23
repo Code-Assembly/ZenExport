@@ -1,262 +1,253 @@
-# ZenExport 6.1.1
+# 🛠️ ZenExport
+### ⌨️ CTRL + S. Keep your CAD and printable parts together.
 
-Versioned local backups and manufacturing exports for Autodesk Fusion.
+**Local F3D, STEP and STL exports for Autodesk Fusion — organized into matching, named revisions.**
 
-## Status
+Built by a maker for the repetitive part between changing a design and preparing it
+for printing. Shared by **EsKay-Labs** as a free gift to the community. 🎁
 
-**6.1.1 is a preview release.** Automated verification covers the domain, filesystem
-operations, simulated Fusion events, and release packaging. Earlier 6.0.3 and 6.1.0
-exports succeeded in the local Fusion session, but the final 6.1.1 save workflow,
-exported-file recovery, and MSI installation still need live validation. Reload and
-validate the add-in on a disposable design before depending on it for production backups.
+[📦 Download 6.1.1 Preview](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1) ·
+[🐛 Report an issue](https://github.com/EsKay-Labs/ZenExport/issues) ·
+[📜 MIT License](LICENSE)
 
-Free and open source under the [MIT license](LICENSE), shared by
-[EsKay-Labs](https://github.com/EsKay-Labs) as a gift to the Fusion and 3D-printing community.
-Download the [6.1.1 preview](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1)
-or use the source installation below.
+## ⌨️ Your familiar shortcut, with local exports
 
-The detailed audit, evidence, architecture, and priorities are in
-[.agent/knowledge/architecture.md](.agent/knowledge/architecture.md).
+With ZenExport's Save interception enabled, **CTRL + S starts a new local export
+revision** for your active Fusion design.
 
-## How it works
+Choose the project destination on your first export. After that, ZenExport remembers it.
 
-1. The toolbar command, or an intercepted native Save, captures the active design.
-2. The command handler runs the export directly on Fusion's main thread, restoring
-   the original synchronous entry path. Native Save is cancelled after validating the
-   design/document and before starting the export. A guard prevents reentrant saves
-   from launching duplicate exports. Custom event posting is no longer used.
-3. The design's portable context UUID and optional cloud file ID resolve its folder.
-   A new design prompts for a parent folder and project name.
-4. Context attributes are written **before** creating the first F3D archive.
-5. The full profile traverses the assembly once to gather visible native part targets
-   and a diagnostic SHA-256 fingerprint. CAD/backup profiles avoid per-part traversal.
-   Repeated instances share native part exports; distinct objects with identical
-   names receive unique filesystem names.
-6. An optional revision description is requested, e.g. `M6 holes`. Leaving it empty
-   keeps a plain numeric name; Cancel exits before reserving a revision or writing
-   context attributes. A shared `vNN_description` label is reserved under CAD, Models,
-   and _Info, so each format has its own matching revision folder.
-   Each requested output is written to a
-   temporary file and published only after Fusion reports success and the output is
-   non-empty.
-7. `export_manifest.json` records every outcome, file size, snapshot/translation
-   durations, and final status.
-   The local last-success marker advances only when all required exports succeed.
+```text
+          ⌨️ CTRL + S
+                │
+       🏷️ Optional revision note
+                │
+        📁 MyProjectFolder/
+                │
+                ├── CAD/
+                │   └── v05_M6 holes/
+                │       └── F3D + STEP
+                │
+                ├── Models/
+                │   └── v05_M6 holes/
+                │       └── STL files
+                │
+                └── _Info/
+                    └── v05_M6 holes/
+                        └── Preview + reports
+```
 
-Every explicit save request creates a version. The old count-based skip check was
-removed: changing a dimension or geometry does not necessarily change object counts.
-The new fingerprint is diagnostic and does not authorize skipping a backup.
+**How Save behaves:** interception is enabled by default. It replaces the intercepted
+native Save with ZenExport's local export workflow; it does not also perform Fusion's
+native/cloud save. Disable interception in settings if you prefer to use the
+**ZenExport Save** toolbar command separately.
 
-## Installation and use
+## ✨ What's useful about it?
 
-For the release ZIP, extract it and copy `ZenExport.bundle/Contents` to a folder
-named `ZenExport`. Then select that `ZenExport` folder in Fusion's Scripts and Add-Ins
-dialog. This manual route avoids relying on automatic bundle discovery, which still
-needs live verification. The ZIP includes this README and the MIT license.
+- 💾 **Keep your source:** whole-design F3D archives and STEP copies.
+- 🖨️ **Prepare your parts:** separate STL files for visible native solid bodies.
+- 🔢 **Keep earlier revisions:** each requested export creates a fresh numbered revision.
+- 🏷️ **Remember what changed:** descriptions such as `M6 holes` or `more clearance`.
+- 📂 **Remember the destination:** return to the same project folder on subsequent saves.
+- 📸 **Recognize each version:** optional viewport previews.
+- 🔍 **See what happened:** per-file export results and timings.
+- 🎛️ **Choose the workload:** full exports, CAD only, or F3D backup only.
 
-Keep `ZenExport.py`, `ZenExport.manifest`, and the entire `zenexport/` directory together.
-Add this folder through Fusion's **Utilities > Scripts and Add-Ins**, or place it under:
+## 📁 A folder structure you can actually follow
+
+```text
+MyProjectFolder/
+├── CAD/
+│   └── v05_M6 holes/
+│       ├── MyProject_v05.f3d
+│       ├── MyProject_v05.step
+│       └── Components/…
+├── Models/
+│   └── v05_M6 holes/
+│       └── Component/
+│           └── Body.stl
+└── _Info/
+    └── v05_M6 holes/
+        ├── _preview.png
+        ├── export_manifest.json
+        └── export_events.jsonl
+```
+
+**Same revision name. Matching CAD and printable parts.** 🧩
+
+The number preserves the sequence; your description explains the change. Greek
+descriptions work too. Unsafe filename characters are replaced and long folder
+descriptions are shortened; the full description remains in the report.
+
+Descriptions apply to new revisions. A command for renaming existing revisions is
+not implemented yet. `_Info` also holds small helpers for numbering and migration;
+keep these with the project.
+
+## 🚀 Get started
+
+1. Download and extract the [release ZIP](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1).
+2. Copy `ZenExport.bundle/Contents` into a folder named **ZenExport**.
+3. In Fusion, open **Utilities → Scripts and Add-Ins** and add that folder.
+4. Stop any older ZenExport instance, then run the new one. Optionally enable **Run on Startup**.
+5. Open a disposable test design and press **CTRL + S**.
+6. Choose your destination and project name, then optionally describe the revision.
+
+Keep these items together:
+
+```text
+ZenExport/
+├── ZenExport.py
+├── ZenExport.manifest
+└── zenexport/
+    └── all included Python modules
+```
+
+You can also install from repository source using that same structure. Run one copy
+of ZenExport at a time. The manual route avoids relying on automatic bundle discovery,
+which still needs live validation.
+
+Default add-in locations:
 
 - Windows: `%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\ZenExport`
 - macOS: `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/ZenExport`
 
-Stop the older instance, then run ZenExport and optionally enable Run on Startup.
-Do not run the Scripts-folder copy and an installed bundle at the same time.
+### 🧰 Toolbar commands
 
-The Scripts and Add-Ins toolbar panel exposes:
+- **ZenExport Save:** export to the remembered project.
+- **ZenExport: Choose Destination:** select a different destination and create an independent project context.
 
-- **ZenExport Save**: export the active design to its remembered project.
-- **ZenExport: Choose Destination**: choose a new destination and context explicitly.
+On Windows, holding Shift while invoking native Save also chooses a new destination.
+The separate toolbar command does not require that platform-specific shortcut.
 
-By default the existing native Save interception is preserved. This can include
-clicking native Save as well as pressing Ctrl+S. The command IDs are inherited from
-the previous implementation and require checking against your Fusion version.
-Shift while invoking native Save also selects a new destination on Windows.
-The separate Choose Destination command works without a platform-specific key check.
-There is no unsupported `CommandDefinition.hotKey` assignment.
+## 🏷️ Describe the change — or keep saving
 
-Cancelling setup creates no export. Cancelling an ongoing export takes effect between
-files when Fusion delivers the cancellation; an individual translator call cannot be
-interrupted by this add-in. All model/export/UI API work stays on the main thread.
-
-## Output layout
+With the description prompt enabled:
 
 ```text
-MyProject/
-├── CAD/
-│   └── v03_M6 holes/
-│       ├── MyProject_v03.f3d
-│       ├── MyProject_v03.step
-│       └── Components/Component/
-│           ├── Component.step
-│           └── Component.f3d
-├── Models/
-│   └── v03_M6 holes/
-│       └── Component/Body.stl
-└── _Info/
-    ├── v03_M6 holes/
-    │   ├── _preview.png
-    │   ├── export_events.jsonl
-    │   └── export_manifest.json
-    ├── version_reservations/
-    └── _Migration/
+CTRL + S → “M6 holes”       → v05_M6 holes
+CTRL + S → “more clearance” → v06_more clearance
 ```
 
-CAD and Models are the two main project folders. Each gets the same revision label:
-`CAD/v03_M6 holes` contains STEP/F3D; `Models/v03_M6 holes` contains matching STL files.
-Auxiliary files use the same label under `_Info`:
+Leave the description blank for a plain numbered revision. Cancel the prompt to
+leave without creating that revision.
 
-- `_preview.png`: a viewport image for visual identification.
-- `export_manifest.json`: the result summary, timings, file list, and full revision
-  description. Its schema is version 3; file paths are relative to the project root.
-- `export_events.jsonl`: one outcome per exported file, useful for troubleshooting an
-  interrupted export.
-
-The project-level `_Info/version_reservations` directory holds small numeric
-claims so simultaneous saves with different descriptions cannot reuse a revision ID.
-Archive filenames retain the numeric version, e.g. `MyProject_v03.f3d`, while the folder
-holds the description. Greek text is supported; unsafe filename characters are replaced
-and long folder descriptions are shortened. The full description remains in the manifest.
-
-Root-component bodies also receive a Models subfolder; the root archive/STEP already
-represent the whole design. Subcomponent CAD exports can include their descendants.
-STLs are a **native part library in component coordinates**, with one file per visible
-native BRep body, not one transformed mesh per assembly instance. Whole-design STEP/F3D
-retain assembly placement. Occurrence proxies determine effective body visibility.
-
-`success` means every required output succeeded. A failed optional thumbnail is shown
-in the report but does not invalidate CAD backup success. `partial`, `cancelled`, and
-`in_progress` versions remain available for inspection and never overwrite history.
-After an interrupted process, the append-only event file contains completed outcomes;
-the manifest remains `in_progress`. A retry claims a new version number.
-
-**Layout correction in 6.1.1:** Existing `Revisions/vNN` snapshots and Models embedded
-inside older CAD revisions are reorganized into matching project-level CAD/Models
-folders. The next number counts both old and new histories. A completed save opens
-the project root so both matching folders are visible.
-
-Migration checks all destinations before moving files, preserves native file bytes,
-backs up original reports under `_Info/_Migration`, and updates their relative paths
-and the last-success pointer. Interrupted metadata rewrites can resume from a journal.
-Conflicting files stop migration instead of being overwritten. Only empty old folders
-are removed. Older unversioned exports are retained under `_Legacy_unversioned` within
-their format category: their original revision cannot be reconstructed reliably.
-
-## Settings and logs
-
-Writable state is separate from the installed program:
-
-- Windows: `%LOCALAPPDATA%\ZenExport\config.json`
-- macOS: `~/Library/Application Support/ZenExport/config.json`
-- Override for isolated development: `ZENEXPORT_DATA_DIR`
-
-The file is created on first run. Edit `settings` while the add-in is stopped, then
-restart it. Preserve `schema_version` and `contexts`.
+Want fewer prompts? Set:
 
 ```json
-{
-  "schema_version": 1,
-  "settings": {
-    "intercept_native_save": true,
-    "profile": "full",
-    "mesh_quality": "high",
-    "thumbnail": true,
-    "open_folder": true,
-    "prompt_revision_name": true
-  },
-  "contexts": {}
+"prompt_revision_name": false
+```
+
+Your next exports will use names such as `v07`, `v08`, and `v09`. ⚡
+
+## 🎛️ Make it fit your workflow
+
+Settings are created on first run. Stop ZenExport before editing them, then restart it.
+
+- **Windows:** `%LOCALAPPDATA%\ZenExport\config.json`
+- **macOS:** `~/Library/Application Support/ZenExport/config.json`
+
+Edit the existing `settings` section and preserve your saved project contexts:
+
+```json
+"settings": {
+  "intercept_native_save": true,
+  "profile": "full",
+  "mesh_quality": "high",
+  "thumbnail": true,
+  "open_folder": true,
+  "prompt_revision_name": true
 }
 ```
 
-| Profile | Whole-design F3D | Whole-design STEP | Visible-body STL | Component STEP/F3D |
+| Setting | What it controls |
+| --- | --- |
+| `intercept_native_save` | Route native Save, including CTRL + S on Windows, through ZenExport |
+| `profile` | Choose `full`, `cad`, or `backup` |
+| `mesh_quality` | Choose `low`, `medium`, or `high` |
+| `thumbnail` | Save a viewport preview |
+| `open_folder` | Open the project folder after a completed export |
+| `prompt_revision_name` | Ask for an optional revision description |
+
+| Profile | Whole-design F3D | Whole-design STEP | Body STLs | Component F3D/STEP |
 | --- | --- | --- | --- | --- |
-| full | yes | yes | yes | yes |
-| cad | yes | yes | no | no |
-| backup | yes | no | no | no |
+| 🧰 `full` | ✅ | ✅ | ✅ | ✅ |
+| 📐 `cad` | ✅ | ✅ | — | — |
+| 💾 `backup` | ✅ | — | — | — |
 
-`mesh_quality` accepts `low`, `medium`, or `high`. STL units follow the Fusion design's
-export default. Set `intercept_native_save` to `false` to use the toolbar independently
-of native Save. `thumbnail` and `open_folder` can be disabled for routine work.
-Set `prompt_revision_name` to `false` to save numbered revisions without the description
-prompt. With the default `true`, each save offers a new, optional description; existing
-revision folders are never renamed by that prompt.
+## 🔄 Already have older ZenExport projects?
 
-`zenexport.log` lives beside config, with rotation at approximately 2 MB and three
-backup logs. Configuration writes use temporary files and atomic replacement. Invalid
-configuration stops startup with an error rather than silently discarding saved paths.
-Version directory reservation handles concurrent claims. The per-user context file is
-intended for a single active ZenExport runtime; use separate `ZENEXPORT_DATA_DIR`
-locations if running independent Fusion instances concurrently.
+The update can recover older destination bindings and reorganize supported older
+layouts into matching **CAD**, **Models**, and **_Info** revision folders.
 
-## Migration and limitations
+Migration checks for conflicting files, preserves native file contents, and keeps
+copies of original reports. Interrupted metadata updates can resume from a journal.
+If an old export has no reliable revision information, it is retained under
+`_Legacy_unversioned`. Only empty old folders are removed.
 
-- Existing `session_config.json` bindings are copied to the per-user configuration's
-  `legacy_contexts` on startup. The original file is preserved and never distributed.
-  Old archives without attributes resume by their recorded name after stripping the
-  trailing Fusion version and archive extension, e.g. `patterns_v01` resumes `patterns`.
-  Matching duplicate records are consolidated by destination; the only existing match
-  is reused. Multiple existing matches offer a numbered selection of saved folders.
-- Legacy name/revision lookup is limited to migration. On the next export the design
-  receives a stable context UUID before F3D creation. Reopening older archives reuses
-  that migrated identity. Generic Untitled names do not automatically select another
-  document's project; an exact old revision binding can recover the original tab.
-- A known folder that is unavailable is reported without initializing a replacement
-  project. Reconnect its drive or explicitly choose a destination.
-- A context UUID travels in the design; the local store takes precedence over paths in
-  older archives. Deliberately copying a design can also copy its context. Choose
-  Destination creates an independent context for a fork.
-- Local F3D export does not perform a native/cloud document save, rename an Untitled
-  tab, or guarantee clearing Fusion's modified flag. Closing the document can still
-  produce Fusion's native save prompt.
-- External references, different linked revisions, configurations, and F3D/F3Z recovery
-  need live validation. Failed translator calls are reported; no automatic unlinking or
-  dependency conversion is performed.
-- Per-body STL export handles BRep bodies. Mesh bodies and drawings are outside this
-  per-part workflow. Native Save is not intercepted when no active Design is available.
-- Non-empty files and a successful API return do not prove semantic validity. Reopen
-  exported files in Fusion to validate geometry, history, units, and references.
-- No automatic deletion or retention pruning is enabled. Each full snapshot costs disk
-  space, and new files consume fresh version numbers even after partial attempts.
+Existing `session_config.json` bindings are imported without changing the original
+file. Ambiguous matches offer a choice of saved destinations. A missing destination
+is reported so you can reconnect its drive or deliberately choose another folder.
 
-## Development checks
+A copied design can inherit its original project's context. Use **Choose Destination**
+when you intend to start an independent project.
 
-The production runtime uses only Python's standard library plus Fusion's bundled
-`adsk` API. Python 3.10+ is required; tests were run locally on 3.11 and 3.13.
+## 🔍 When something needs attention
 
-```powershell
-py -3.13 -m unittest discover -s tests -v
-py -3.13 -m compileall -q ZenExport.py zenexport tools tests
-py -3.13 -m venv .venv
-./.venv/Scripts/python.exe -m pip install ruff==0.14.1
-./.venv/Scripts/python.exe -m ruff check .
-py -3.13 tools/build_bundle.py
-```
+The revision's `_Info` folder contains:
 
-To inspect compatibility with a particular Fusion installation without loading its
-native libraries:
+- **`export_manifest.json`:** the export summary and file results.
+- **`export_events.jsonl`:** completed per-file outcomes, useful after interruption.
+- **`_preview.png`:** the optional viewport image.
 
-```powershell
-py -3.13 tools/verify_fusion_api.py "<Fusion installation>/API/Python/packages/adsk"
-```
+The application log, **`zenexport.log`**, lives beside `config.json` and rotates
+automatically. Configuration writes use atomic replacement; invalid configuration
+is reported rather than silently discarding remembered destinations.
 
-This checks member existence, not native behavior. CI runs lint, tests, compilation,
-and deterministic bundle creation on Windows. See [HOW_TO_BUILD_MSI.md](HOW_TO_BUILD_MSI.md)
-for distribution. Check the repository's Actions tab for the current CI result.
-No native installer build has been performed.
+Failed or interrupted attempts can leave a partial revision for inspection. Retrying
+uses a new number. The last-success marker advances only when every required export
+succeeds. An optional preview failure is recorded separately.
 
-## Live acceptance checklist (pending)
+## 🧪 Current release status
 
-Use a temporary project and retain a separate known-good backup.
+**6.1.1 is a preview update.**
 
-- Load, stop, and reload twice; confirm one pair of toolbar commands and no duplicate
-  save interception. Test native Save with interception enabled and disabled.
-- Export two separate Untitled documents to different folders; edit and switch tabs.
-- Reopen the very first exported F3D and confirm that the destination is remembered.
-- Change a parameter value without adding timeline items; confirm a new version.
-- Test repeated, renamed, same-name, and nested hidden components; inspect body counts
-  and STL coordinates, units, and visibility.
-- Force an export or filesystem failure; verify partial status and a successful retry.
-- Test cancellation, missing destinations, and linked assemblies; reopen F3D and STEP
-  and compare geometry and parametric history with the source.
-- Measure full/cad/backup profiles on representative small and large projects. Use
-  per-format durations in the export manifest before drawing performance conclusions.
+Automated Windows CI has passed **63 tests on both Python 3.10 and 3.13**, covering
+simulated Fusion events, filesystem behavior, migration and packaging.
+
+Earlier 6.0.3 and 6.1.0 exports succeeded in the local Fusion session. The final 6.1.1
+save workflow and full recovery checks by reopening exported F3D/STEP files still
+need live validation. Save interception should be checked against your Fusion version.
+
+Start with a disposable design and retain separate known-good backups.
+
+### A few practical details
+
+- Local export does not guarantee clearing Fusion's modified flag or rename an Untitled tab;
+  closing the design may still prompt for a native save.
+- STL exports cover visible native BRep bodies. Repeated instances share part exports;
+  STLs use component coordinates rather than placed assembly coordinates.
+- Check STL scale and units in your slicer; units follow Fusion's export default.
+- Linked assemblies, external references and configurations need additional recovery validation.
+- Mesh bodies and drawings are outside the per-part export workflow.
+- Cancellation takes effect between export files when Fusion delivers it.
+- No automatic cleanup deletes older revisions. Full snapshots consume additional disk space.
+- macOS compatibility and MSI installation have not been verified. No MSI is supplied.
+- ZenExport does not change Autodesk's licensing requirements or limits.
+- Independent concurrent Fusion runtimes should use separate `ZENEXPORT_DATA_DIR` locations.
+
+## 🤝 Made for makers
+
+Useful bug reports include your Fusion version, what you tried, and the relevant
+error message. Remove personal paths or project details before sharing logs.
+
+[Open an issue](https://github.com/EsKay-Labs/ZenExport/issues) or contribute an improvement.
+
+For development and packaging details:
+
+- [Development checks and live acceptance](https://github.com/EsKay-Labs/ZenExport/blob/main/DEVELOPMENT.md)
+- [Architecture and audit](https://github.com/EsKay-Labs/ZenExport/blob/main/.agent/knowledge/architecture.md)
+- [Project plan](https://github.com/EsKay-Labs/ZenExport/blob/main/PROJECT-PLAN.md)
+- [Distribution guide](https://github.com/EsKay-Labs/ZenExport/blob/main/HOW_TO_BUILD_MSI.md)
+- [Release notes](https://github.com/EsKay-Labs/ZenExport/blob/main/RELEASE_NOTES.md)
+
+**Free. Open source. MIT licensed. Happy making! 🛠️🖨️**

@@ -44,6 +44,10 @@ verified. Detailed findings are in `.agent/knowledge/architecture.md`.
 - [x] Confirm corrected CI succeeds on Windows with Python 3.10 and 3.13 (run 40033840353).
 - [x] Share the preview on three permitted Reddit communities and record verified
       URLs and publication limits in PUBLICATION_LOG.md.
+- [x] Refresh the maker-facing README and all three published Reddit bodies with
+      CTRL + S, emojis and the corrected project-root diagram; update the user's
+      original r/3Dprinting post and verify each saved result. Record r/maker's
+      self-promotion restriction without submitting a promotional post there.
 
 ## Required validation outside automated mocks
 

@@ -3,6 +3,10 @@
 Publication drafts, not a record of completed posts. Disclose ownership and check
 each community's current rules and your posting history before submitting.
 
+The current approved maker-facing copy is in [REDDIT_UPDATE.md](REDDIT_UPDATE.md).
+It leads with CTRL + S and shows the optional revision note above MyProjectFolder,
+with CAD, Models and _Info underneath. The alternatives below are older drafts.
+
 ## Open-source community
 
 Title: ZenExport: an MIT-licensed Fusion add-in for versioned F3D/STEP and STL exports

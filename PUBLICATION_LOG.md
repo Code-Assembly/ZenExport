@@ -35,15 +35,42 @@ All three disclose ownership, the MIT license, preview status, pending recovery
 checks and AI assistance for the refactor/tests. No unsupported superiority,
 licensing-limit bypass or guaranteed recovery claims were published.
 
-## Communities checked but not posted to
+## Approved copy refresh — 2026-10-24
+
+The bodies of all three posts above were edited to the approved maker-facing copy
+in REDDIT_UPDATE.md. Each saved result was verified in the browser. The copy leads
+with CTRL + S, adds emojis and places MyProjectFolder below the optional revision
+note, with CAD, Models and _Info beneath it. Titles were retained.
+
+The user's existing r/3Dprinting post was also edited and the saved body verified:
+https://www.reddit.com/r/3Dprinting/comments/1pgz2yy/i_built_the_save_as_feature_fusion_360_forgot/
+
+This was an update to the original post, not a new submission. The current community
+rules permit only one promotional post per project and restrict software promotion:
+https://www.reddit.com/r/3Dprinting/wiki/communityrules/
+
+The long-term personal-use statement reflects the owner's supplied experience;
+it does not establish acceptance of the latest preview. The posts retain the
+native/cloud Save distinction, preview and recovery limits, native STL coordinates,
+and AI-assistance disclosure. Historical user comments were not rewritten.
+
+README.md now uses the same CTRL + S emphasis and corrected diagram. Detailed
+developer checks were retained in DEVELOPMENT.md. Documentation formatting, links
+and inclusion of the new README in a locally built 13-file bundle were checked.
+The previously published release ZIP and its checksum were not replaced by this
+documentation refresh.
+
+## Communities checked but no new post submitted
 
 - r/Fusion360: prohibits self-promotion.
-- r/3Dprinting: prohibits posts seeking testers/feedback for 3D-printing software.
+- r/3Dprinting: updated the existing post as recorded above; no duplicate submitted.
   https://www.reddit.com/r/3Dprinting/wiki/communityrules/
 - r/opensource and r/hobbycnc: prohibit AI-generated post/comment content.
   https://www.reddit.com/r/opensource/
   https://www.reddit.com/r/hobbycnc/
-- r/maker: prohibits self-promotion. https://www.reddit.com/r/maker/
+- r/maker: rule 3, "No Self Promotion or Commercial Use", explicitly prohibits
+  self-promotional posts. Rechecked for this request; no submission or moderator
+  message was sent. https://www.reddit.com/r/maker/
 - r/prusa3d: prohibits unapproved self-promotion. https://www.reddit.com/r/prusa3d/
 - r/ender3: requires Ender-specific content and rejects overly general posts.
   https://www.reddit.com/r/ender3/
