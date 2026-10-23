@@ -63,6 +63,11 @@ is still pending. https://github.com/EsKay-Labs/ZenExport
 
 - r/Fusion360: the visible rule prohibits self-promotion and product promotion.
   Do not publish a promotional post without moderator permission.
+- r/opensource: its low-effort rule explicitly prohibits AI-generated content;
+  do not submit these AI-assisted drafts there.
+  https://www.reddit.com/r/opensource/
+- r/maker: self-promotional posts are prohibited.
+  https://www.reddit.com/r/maker/
 - r/3Dprinting: the community rules prohibit software posts seeking beta testers
   or feedback. Do not post this preview announcement there.
   https://www.reddit.com/r/3Dprinting/wiki/communityrules/

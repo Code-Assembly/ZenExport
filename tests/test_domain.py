@@ -83,14 +83,14 @@ class StorageTests(unittest.TestCase):
             model = design()
             model.parentDocument.name = "patterns_v01.f3d"
             context = resolve_context(model, store)
-            self.assertEqual(Path(context["root"]), project)
+            self.assertEqual(Path(context["root"]).resolve(), project.resolve())
             self.assertNotIn("hash", context)
             key = bind_context(model, store, project, context["name"], context["context_id"])
             reopened = design()
             reopened.parentDocument.name = "patterns v2"
             recovered = resolve_context(reopened, ContextStore(base / "state"))
             self.assertEqual(recovered["context_id"], key)
-            self.assertEqual(Path(recovered["root"]), project)
+            self.assertEqual(Path(recovered["root"]).resolve(), project.resolve())
             self.assertNotIn("hash", store.data["legacy_contexts"]["patterns"])
             self.assertEqual(legacy.read_bytes(), original)
 
@@ -106,7 +106,7 @@ class StorageTests(unittest.TestCase):
             }})
             store = ContextStore(base / "state", legacy)
             context = store.find_legacy_context("part_v03")
-            self.assertEqual(Path(context["root"]), current)
+            self.assertEqual(Path(context["root"]).resolve(), current.resolve())
 
     def test_legacy_lookup_does_not_choose_between_two_existing_same_name_projects(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -138,7 +138,8 @@ class StorageTests(unittest.TestCase):
             }})
             store = ContextStore(base / "state", legacy)
             self.assertIsNone(store.find_legacy_context("Untitled"))
-            self.assertEqual(Path(store.find_legacy_context("Untitled", "revision-B")["root"]), second)
+            self.assertEqual(Path(store.find_legacy_context("Untitled", "revision-B")["root"]).resolve(),
+                             second.resolve())
 
     def test_legacy_lookup_keeps_known_missing_destination_instead_of_initializing(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -147,7 +148,7 @@ class StorageTests(unittest.TestCase):
             legacy = base / "session_config.json"
             atomic_json(legacy, {"contexts": {"Part": {"root": str(missing), "name": "Part"}}})
             store = ContextStore(base / "state", legacy)
-            self.assertEqual(Path(store.find_legacy_context("Part_v01")["root"]), missing)
+            self.assertEqual(Path(store.find_legacy_context("Part_v01")["root"]).resolve(), missing.resolve())
             self.assertFalse(missing.exists())
 
     def test_legacy_migration_preserves_current_contexts_and_settings(self):

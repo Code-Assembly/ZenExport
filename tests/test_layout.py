@@ -60,7 +60,7 @@ class LayoutMigrationTests(unittest.TestCase):
             (claims / "v04").touch()
             result = migrate_project_layout(root)
             manifest = self.assert_migrated(root, source.name, expected)
-            self.assertEqual(result["manifest_paths"][str(old_manifest)], str(manifest))
+            self.assertEqual(result["manifest_paths"][str(old_manifest.resolve())], str(manifest.resolve()))
             self.assertFalse((root / "Revisions").exists())
             self.assertTrue((root / "_Info/version_reservations/v04").is_file())
             backups = list((root / "_Info/_Migration" / source.name).glob("export_manifest.json.*.bak"))
@@ -142,7 +142,7 @@ class LayoutMigrationTests(unittest.TestCase):
             self.assertFalse(old_manifest.exists())
             result = migrate_project_layout(root)
             manifest = self.assert_migrated(root, source.name, expected)
-            self.assertEqual(result["manifest_paths"][str(old_manifest)], str(manifest))
+            self.assertEqual(result["manifest_paths"][str(old_manifest.resolve())], str(manifest.resolve()))
 
     def test_context_last_success_is_relocated_without_changing_identity(self):
         with tempfile.TemporaryDirectory() as directory:

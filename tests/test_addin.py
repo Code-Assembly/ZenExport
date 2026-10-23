@@ -115,6 +115,8 @@ class AddinTests(unittest.TestCase):
         sys.modules.pop("zenexport.addin", None)
         self.module = importlib.import_module("zenexport.addin")
         self.addin = self.module.ZenExportAddin(Path(self.temporary.name))
+        # Host keyboard input must not change a simulated Save into Choose Destination.
+        self.addin.shift_held = Mock(return_value=False)
         self.addin.store.settings.update(open_folder=False, thumbnail=False)
         bind_context(self.model, self.addin.store, self.temporary.name, "Test")
         self.addin.start()
