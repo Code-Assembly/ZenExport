@@ -6,7 +6,7 @@
 Built by a maker for the repetitive part between changing a design and preparing it
 for printing. Shared by **EsKay-Labs** as a free gift to the community. 🎁
 
-[📦 Download 6.1.1 Preview](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1) ·
+[📦 Download 6.1.2 Preview](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.2) ·
 [🐛 Report an issue](https://github.com/EsKay-Labs/ZenExport/issues) ·
 [📜 MIT License](LICENSE)
 
@@ -53,6 +53,18 @@ native/cloud save. Disable interception in settings if you prefer to use the
 - 🔍 **See what happened:** per-file export results and timings.
 - 🎛️ **Choose the workload:** full exports, CAD only, or F3D backup only.
 
+### 📏 6.1.2 fix: correct STL size in Bambu Studio
+
+STL exports now explicitly use **millimeters**, independent of the design's display
+units. Earlier versions inherited the design units, which could produce tiny parts
+when a slicer interpreted those coordinates as millimeters (for example, 50 mm
+written as 5 in centimeters and imported as 5 mm).
+
+After updating, **Stop → Run ZenExport**, press **CTRL + S**, and import the newly
+exported STL at **100% scale**. Previously exported STLs are not modified; export
+them again from the source design. This uses Fusion's `STLExportOptions.unitType`
+API, available since May 2025. Live Fusion/Bambu size verification is still pending.
+
 ## 📁 A folder structure you can actually follow
 
 ```text
@@ -85,7 +97,7 @@ keep these with the project.
 
 ## 🚀 Get started
 
-1. Download and extract the [release ZIP](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1).
+1. Download and extract the [release ZIP](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.2).
 2. Copy `ZenExport.bundle/Contents` into a folder named **ZenExport**.
 3. In Fusion, open **Utilities → Scripts and Add-Ins** and add that folder.
 4. Stop any older ZenExport instance, then run the new one. Optionally enable **Run on Startup**.
@@ -209,12 +221,14 @@ succeeds. An optional preview failure is recorded separately.
 
 ## 🧪 Current release status
 
-**6.1.1 is a preview update.**
+**6.1.2 is a preview update.**
 
-Automated Windows CI has passed **63 tests on both Python 3.10 and 3.13**, covering
-simulated Fusion events, filesystem behavior, migration and packaging.
+**65 automated tests pass locally**, covering simulated Fusion events, filesystem
+behavior, migration, packaging and STL units across mm, cm, meters and inches.
+The previous release passed Windows CI on Python 3.10 and 3.13; check
+[GitHub Actions](https://github.com/EsKay-Labs/ZenExport/actions) for this update's result.
 
-Earlier 6.0.3 and 6.1.0 exports succeeded in the local Fusion session. The final 6.1.1
+Earlier 6.0.3 and 6.1.0 exports succeeded in the local Fusion session. The final 6.1.2
 save workflow and full recovery checks by reopening exported F3D/STEP files still
 need live validation. Save interception should be checked against your Fusion version.
 
@@ -226,7 +240,7 @@ Start with a disposable design and retain separate known-good backups.
   closing the design may still prompt for a native save.
 - STL exports cover visible native BRep bodies. Repeated instances share part exports;
   STLs use component coordinates rather than placed assembly coordinates.
-- Check STL scale and units in your slicer; units follow Fusion's export default.
+- STL coordinates are explicitly exported in millimeters; import new files at 100% scale.
 - Linked assemblies, external references and configurations need additional recovery validation.
 - Mesh bodies and drawings are outside the per-part export workflow.
 - Cancellation takes effect between export files when Fusion delivers it.

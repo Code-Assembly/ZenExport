@@ -30,7 +30,8 @@ REQUIRED = {
                        "isVisible", "transform2"),
         "ExportManager": ("createFusionArchiveExportOptions", "createSTEPExportOptions",
                           "createSTLExportOptions", "execute"),
-        "STLExportOptions": ("meshRefinement", "sendToPrintUtility"),
+        "STLExportOptions": ("meshRefinement", "sendToPrintUtility", "unitType"),
+        "DistanceUnits": ("MillimeterDistanceUnits",),
         "MeshRefinementSettings": ("MeshRefinementHigh", "MeshRefinementMedium", "MeshRefinementLow"),
     },
 }

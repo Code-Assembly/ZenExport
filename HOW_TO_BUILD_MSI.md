@@ -8,7 +8,7 @@ Run from the repository root with Python 3.10 or newer:
 py -3.13 tools/build_bundle.py
 ```
 
-This creates `dist/ZenExport-6.1.1.zip` and a SHA-256 sidecar. Extract the ZIP to obtain
+This creates `dist/ZenExport-6.1.2.zip` and a SHA-256 sidecar. Extract the ZIP to obtain
 `ZenExport.bundle`. The bundle includes PackageContents.xml, the Fusion entry point,
 its .manifest, all eight runtime modules, the README, and the MIT license. It excludes session_config.json,
 per-user configuration, logs, tests, development tools, and unrelated project files.
@@ -31,13 +31,13 @@ From the repository root, with the WiX tools available on PATH:
 ```powershell
 New-Item -ItemType Directory -Path dist -Force
 candle.exe -arch x64 installer_source.wxs -out dist/installer_source.wixobj
-light.exe dist/installer_source.wixobj -out dist/ZenExport-6.1.1.msi
+light.exe dist/installer_source.wixobj -out dist/ZenExport-6.1.2.msi
 ```
 
 The source now includes each runtime file as an individual installer component and
 never installs personal context state. Runtime settings/logs are created separately
 in the user's writable ZenExport data directory. The original UpgradeCode is retained.
-The product version, bundle version, and Python runtime version are all 6.1.1.
+The product version, bundle version, and Python runtime version are all 6.1.2.
 
 ## Release acceptance
 

@@ -253,6 +253,9 @@ class ZenExportAddin:
             if job.format == "stl":
                 options = manager.createSTLExportOptions(job.geometry, filename)
                 if options:
+                    # STL carries no units. Slicers interpret coordinates as mm,
+                    # while Fusion initializes this option from the design units.
+                    options.unitType = adsk.fusion.DistanceUnits.MillimeterDistanceUnits
                     levels = adsk.fusion.MeshRefinementSettings
                     options.meshRefinement = {
                         "low": levels.MeshRefinementLow,

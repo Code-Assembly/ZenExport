@@ -1,6 +1,6 @@
 # Project plan
 
-Updated: 2026-10-24.
+Updated: 2026-10-25.
 
 ## Current focus
 
@@ -10,6 +10,8 @@ verified. Detailed findings are in `.agent/knowledge/architecture.md`.
 
 ## Completed
 
+- [x] 6.1.2: explicitly export STL coordinates in millimeters and add regression
+      coverage for mm/cm/m/inch defaults and rejected unit settings (65 tests).
 - [x] 6.1.1: implement the clarified layout CAD/revision and Models/revision with
       identical labels; group reports under _Info/revision and open the project root.
 - [x] Reorganize existing patterns v02/v03/v04 exports; verify 24 native/mesh/preview
@@ -51,6 +53,8 @@ verified. Detailed findings are in `.agent/knowledge/architecture.md`.
 
 ## Required validation outside automated mocks
 
+- [ ] Verify 6.1.2 STL dimensions against the Fusion source and Bambu Studio at
+      100% scale; the attempted live check was interrupted before execution.
 - [ ] Verify the 6.1.1 description prompt, paired revision folders, and project opening
       in Fusion on the next real save.
 - [ ] Load/reload and real Save interception on the installed Fusion version.

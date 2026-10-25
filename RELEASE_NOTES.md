@@ -1,3 +1,46 @@
+# ZenExport 6.1.2 preview — STL scale fix
+
+Released: 2026-10-25.
+
+## 📏 Fixed: tiny STL imports in Bambu Studio and other mm-based slicers
+
+ZenExport previously left `STLExportOptions.unitType` at Fusion's design default.
+STL does not store a unit declaration, so coordinates exported in centimeters or
+inches could be interpreted as millimeters by the slicer. For example, a 50 mm
+part exported as 5 centimeters could appear as 5 mm.
+
+Every new STL export now explicitly sets
+`adsk.fusion.DistanceUnits.MillimeterDistanceUnits`. CAD exports and model geometry
+are unchanged. If Fusion rejects this setting, the STL is reported as failed
+instead of advancing the successful-backup marker.
+
+## ⌨️ Apply the fix
+
+1. Download and extract `ZenExport-6.1.2.zip`; replace the installed runtime files.
+2. In Fusion's Scripts and Add-Ins, **Stop → Run ZenExport** to load the update.
+3. Open the source design and press **CTRL + S** for a new export revision.
+4. Import the **new STL at 100% scale** in Bambu Studio.
+
+Old STL files are not rewritten. Re-export them from the source design; do not
+apply a blanket scale multiplier to an archive containing mixed original units.
+
+## Verification and compatibility
+
+- 65 automated tests pass locally, including regression coverage for mm, cm,
+  meters and inches and rejection of the STL unit setting.
+- The installed Fusion API exposes the required `unitType` property and millimeter
+  enum; the expanded surface check verifies 67 API members.
+- Requires Fusion's STL `unitType` API, introduced in May 2025.
+- Native Fusion export and Bambu Studio dimension verification remain pending;
+  the live check was interrupted before execution. Automated translator simulations
+  do not establish live geometry or recovery validation.
+- The release remains a preview. Existing local/native Save and recovery limits
+  described in the README still apply.
+
+API reference: https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/fusion_STLExportOptions_unitType.htm
+
+---
+
 # ZenExport 6.1.1 preview
 
 Free and open source under the MIT license. Shared by EsKay-Labs as a gift to the

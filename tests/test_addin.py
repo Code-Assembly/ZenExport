@@ -109,6 +109,8 @@ class AddinTests(unittest.TestCase):
         fusion.Design = SimpleNamespace(cast=lambda value: value if value is self.model else None)
         fusion.MeshRefinementSettings = SimpleNamespace(MeshRefinementHigh=3, MeshRefinementMedium=2,
                                                         MeshRefinementLow=1)
+        fusion.DistanceUnits = SimpleNamespace(MillimeterDistanceUnits=0, CentimeterDistanceUnits=1,
+                                               MeterDistanceUnits=2, InchDistanceUnits=3)
         adsk.core, adsk.fusion = core, fusion
         self.modules = patch.dict(sys.modules, {"adsk": adsk, "adsk.core": core, "adsk.fusion": fusion})
         self.modules.start()
@@ -151,6 +153,53 @@ class AddinTests(unittest.TestCase):
         recorded = next(iter(self.addin.store.data["contexts"].values()))
         self.assertNotIn("last_success_manifest", recorded)
         self.assertIn("Incomplete", self.messages[-1][0])
+
+    def test_stl_dimensions_are_millimeters_regardless_of_design_units(self):
+        # Model a 2 x 3 x 4 cm part through a translator that honors unitType.
+        # Leaving the design default in place reproduces the slicer scale bug.
+        factors_from_cm = {0: 10, 1: 1, 2: 0.01, 3: 1 / 2.54}
+        original_execute = self.manager.execute
+        exported = []
+
+        def execute(options):
+            if options.format != "stl":
+                return original_execute(options)
+            factor = factors_from_cm[options.unitType]
+            vertices = [(0, 0, 0), (2 * factor, 0, 0), (0, 3 * factor, 4 * factor)]
+            Path(options.filename).write_text(
+                "solid part\n" + "".join(f"vertex {x} {y} {z}\n" for x, y, z in vertices)
+                + "endsolid part\n", encoding="ascii")
+            exported.append(vertices)
+            return True
+
+        self.manager.execute = execute
+        for units in (0, 1, 2, 3):
+            with self.subTest(design_units=units):
+                self.manager.createSTLExportOptions = lambda geometry, filename: SimpleNamespace(
+                    filename=filename, format="stl", unitType=units)
+                self.addin.request_export()
+                self.assertEqual(exported[-1], [(0, 0, 0), (20, 0, 0), (0, 30, 40)])
+
+    def test_rejected_stl_unit_setting_is_a_failure_not_a_wrong_scale_success(self):
+        class RejectedUnits:
+            def __init__(self, filename):
+                self.filename = filename
+                self.format = "stl"
+
+            @property
+            def unitType(self):
+                return 1
+
+            @unitType.setter
+            def unitType(self, value):
+                raise RuntimeError("STL millimeter units rejected")
+
+        self.manager.createSTLExportOptions = lambda geometry, filename: RejectedUnits(filename)
+        self.addin.request_export()
+        self.assertEqual(self.manager.formats, ["f3d", "step"])
+        self.assertIn("Incomplete", self.messages[-1][0])
+        recorded = next(iter(self.addin.store.data["contexts"].values()))
+        self.assertNotIn("last_success_manifest", recorded)
 
     def test_non_design_document_keeps_native_save(self):
         self.app.activeProduct = None
