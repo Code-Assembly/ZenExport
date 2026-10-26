@@ -1,119 +1,267 @@
-# 🏯 ZenExport v5.2
+# 🛠️ ZenExport
+### ⌨️ CTRL + S. Keep your CAD and printable parts together.
 
-![License](https://img.shields.io/badge/License-MIT-green.svg) ![Fusion 360](https://img.shields.io/badge/Fusion%20360-Addin-orange.svg) ![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
+**Local F3D, STEP and STL exports for Autodesk Fusion — organized into matching, named revisions.**
 
-**The "Peace of Mind" Local Save Workflow for Fusion 360.**
+Built by a maker for the repetitive part between changing a design and preparing it
+for printing. Shared by **EsKay-Labs** as a free gift to the community. 🎁
 
-ZenExport is a Fusion 360 Add-In that **replaces** the native Cloud Save (`Ctrl+S` on Windows, `Cmd+S` on macOS) with a powerful local asset manager. It forces a disciplined, organised folder structure on your hard drive, keeping your IP safe and your versions sane.
+[📦 Download 6.1.2 Preview](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.2) ·
+[🐛 Report an issue](https://github.com/EsKay-Labs/ZenExport/issues) ·
+[📜 MIT License](LICENSE)
 
----
+## ⌨️ Your familiar shortcut, with local exports
 
-## ✨ Features that Spark Joy
+With ZenExport's Save interception enabled, **CTRL + S starts a new local export
+revision** for your active Fusion design.
 
-- 🚫 **Ctrl+S / Cmd+S Override:** We intercept the native save command. No more "Cloud Save" dialogs. One press, one local backup.
-- 🧠 **Smart Context Binding:**
-  - Setup a project _once_. ZenExport stores the project inside the design itself, and drops a `zenexport.json` in the project folder.
-  - Reopen any exported `.f3d`, press Save, and it goes to the right place. Every time.
-  - Moved the folder? Pick it once and ZenExport picks up the numbering where it left off.
-- 💾 **Incremental Versioning:** auto-saves as `Project_v01.f3d`, `Project_v02.f3d`... never overwriting history.
-- 🚀 **Real Change Detection:** Fingerprints your design's DNA (Timeline, every Parameter including sketch dimensions, every Body's geometry). If nothing changed, it asks before saving a duplicate version.
-- 📝 **Version Notes:** Type a short note on save (e.g. _reduced width to 10_) and it lands as `reduced width to 10.txt` next to that version. Leave it blank for no file.
-- 📦 **Full Package Export:**
-  - 📄 `.f3d` (Parametric Source)
-  - 🛠️ `.step` (CAD Interchange)
-  - 🗿 `.stl` (Resultant Mesh for every visible body)
-  - 🖼️ `_preview.png` (Viewport Snapshot)
-- 📂 **Auto-Open:** Opens the project folder after every save (Explorer or Finder) so you can grab your files immediately.
-- 🍎 **Windows & macOS:** Works on both.
-
----
-
-## 🛠️ Installation
-
-1.  **Download** this folder.
-2.  Move it to your Fusion 360 API folder:
-    - **Windows:** `%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\`
-    - **macOS:** `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/`
-    - _(Ensure the folder is named `ZenExport` and contains `ZenExport.py` inside)_
-3.  **Restart Fusion 360**.
-4.  Go to **Utilities > Scripts and Add-Ins**, select `ZenExport`, and ensure **Run on Startup** is checked.
-
----
-
-## 🎮 How to Use
-
-### 1. The First Save (Initialization)
-
-Open a new design. Press **`Ctrl+S`** (**`Cmd+S`** on macOS).
-
-- ZenExport will ask: _"Where should this project live?"_
-- Select a parent directory (e.g., `Desktop/MyProjects`).
-- Confirm the **Project Name** (e.g., `TurboEncabulator`).
-- Add an optional **Version Note**, or leave it blank.
-- **Action:** It creates `.../TurboEncabulator/CAD/v01/`, runs the export, and renames the "Untitled" tab to `TurboEncabulator`.
-- _Picked a folder that is already a ZenExport project (it has a `zenexport.json`)? It adopts it and skips the name prompt._
-
-### 2. The Routine (Update)
-
-Make some changes. Press **`Ctrl+S`**.
-
-- **Action:** ZenExport detects the design changes and creates `v02` in the same folder. The only prompt is the optional note.
-- _If no changes were made, it asks whether to save a new version anyway._
-- _Cancel the note prompt to abort the save._
-
-### 3. The "Resume" (Context Awareness)
-
-- Close Fusion.
-- Re-open your `TurboEncabulator_v02.f3d` file.
-- Press **`Ctrl+S`**.
-- **Action:** The `.f3d` remembers its project folder, so ZenExport resumes saving there as `v03`. No prompts.
-
-### 4. Moving a Project
-
-- Move or rename the project folder however you like.
-- On the next save ZenExport can't find it, so it asks for a location.
-- Pick the moved folder. It reads the `zenexport.json` inside and continues the numbering.
-
----
-
-## 📂 Folder Structure
-
-ZenExport enforces this clean layout:
+Choose the project destination on your first export. After that, ZenExport remembers it.
 
 ```text
-MyProject/
-├── CAD/
-│   ├── v01/
-│   │   ├── MyProject_v01.f3d
-│   │   └── MyProject_v01.step
-│   └── v02/
-│       ├── MyProject_v02.f3d
-│       ├── MyProject_v02.step
-│       └── reduced width to 10.txt
-├── Models/
-│   ├── Body1.stl
-│   └── ComponentA_Body1.stl
-├── _preview.png
-└── zenexport.json
+          ⌨️ CTRL + S
+                │
+       🏷️ Optional revision note
+                │
+        📁 MyProjectFolder/
+                │
+                ├── CAD/
+                │   └── v05_M6 holes/
+                │       └── F3D + STEP
+                │
+                ├── Models/
+                │   └── v05_M6 holes/
+                │       └── STL files
+                │
+                └── _Info/
+                    └── v05_M6 holes/
+                        └── Preview + reports
 ```
 
-- `Models/` always holds the latest mesh of each visible body, exported where it sits in the assembly. Bodies in components are prefixed with the component name, and repeated copies get ` (2)`, ` (3)`...
-- `zenexport.json` marks the folder as a ZenExport project. Don't delete it.
+**How Save behaves:** interception is enabled by default. It replaces the intercepted
+native Save with ZenExport's local export workflow; it does not also perform Fusion's
+native/cloud save. Disable interception in settings if you prefer to use the
+**ZenExport Save** toolbar command separately.
 
----
+## ✨ What's useful about it?
 
-## ⚙️ Settings
+- 💾 **Keep your source:** whole-design F3D archives and STEP copies.
+- 🖨️ **Prepare your parts:** separate STL files for visible native solid bodies.
+- 🔢 **Keep earlier revisions:** each requested export creates a fresh numbered revision.
+- 🏷️ **Remember what changed:** descriptions such as `M6 holes` or `more clearance`.
+- 📂 **Remember the destination:** return to the same project folder on subsequent saves.
+- 📸 **Recognize each version:** optional viewport previews.
+- 🔍 **See what happened:** per-file export results and timings.
+- 🎛️ **Choose the workload:** full exports, CAD only, or F3D backup only.
 
-- 🪵 **Debug Log:** Tick **Utilities > Add-Ins > ZenExport Debug Log** to write `zenexport_debug.log` next to `ZenExport.py`. Off by default. It's capped at 512 KB, with one `.old` copy kept. Messages always appear in the **Text Commands** panel either way.
-- _Settings are stored per machine in `session_config.json` next to the add-in._
+### 📏 6.1.2 fix: correct STL size in Bambu Studio
 
----
+STL exports now explicitly use **millimeters**, independent of the design's display
+units. Earlier versions inherited the design units, which could produce tiny parts
+when a slicer interpreted those coordinates as millimeters (for example, 50 mm
+written as 5 in centimeters and imported as 5 mm).
 
-## ⚠️ Known Limitations
+After updating, **Stop → Run ZenExport**, press **CTRL + S**, and import the newly
+exported STL at **100% scale**. Previously exported STLs are not modified; export
+them again from the source design. This uses Fusion's `STLExportOptions.unitType`
+API, available since May 2025. Live Fusion/Bambu size verification is still pending.
 
-- **Tab names:** ZenExport renames an "Untitled" tab to the project name, but Fusion still treats the design as unsaved. Rely on the file system names!
-- **Local Only:** This script does NOT upload to the Autodesk Cloud.
+## 📁 A folder structure you can actually follow
 
----
+```text
+MyProjectFolder/
+├── CAD/
+│   └── v05_M6 holes/
+│       ├── MyProject_v05.f3d
+│       ├── MyProject_v05.step
+│       └── Components/…
+├── Models/
+│   └── v05_M6 holes/
+│       └── Component/
+│           └── Body.stl
+└── _Info/
+    └── v05_M6 holes/
+        ├── _preview.png
+        ├── export_manifest.json
+        └── export_events.jsonl
+```
 
-_"Order is the sanity of the mind, the health of the body, the peace of the city."_
+**Same revision name. Matching CAD and printable parts.** 🧩
+
+The number preserves the sequence; your description explains the change. Greek
+descriptions work too. Unsafe filename characters are replaced and long folder
+descriptions are shortened; the full description remains in the report.
+
+Descriptions apply to new revisions. A command for renaming existing revisions is
+not implemented yet. `_Info` also holds small helpers for numbering and migration;
+keep these with the project.
+
+## 🚀 Get started
+
+1. Download and extract the [release ZIP](https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.2).
+2. Copy `ZenExport.bundle/Contents` into a folder named **ZenExport**.
+3. In Fusion, open **Utilities → Scripts and Add-Ins** and add that folder.
+4. Stop any older ZenExport instance, then run the new one. Optionally enable **Run on Startup**.
+5. Open a disposable test design and press **CTRL + S**.
+6. Choose your destination and project name, then optionally describe the revision.
+
+Keep these items together:
+
+```text
+ZenExport/
+├── ZenExport.py
+├── ZenExport.manifest
+└── zenexport/
+    └── all included Python modules
+```
+
+You can also install from repository source using that same structure. Run one copy
+of ZenExport at a time. The manual route avoids relying on automatic bundle discovery,
+which still needs live validation.
+
+Default add-in locations:
+
+- Windows: `%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\ZenExport`
+- macOS: `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/ZenExport`
+
+### 🧰 Toolbar commands
+
+- **ZenExport Save:** export to the remembered project.
+- **ZenExport: Choose Destination:** select a different destination and create an independent project context.
+
+On Windows, holding Shift while invoking native Save also chooses a new destination.
+The separate toolbar command does not require that platform-specific shortcut.
+
+## 🏷️ Describe the change — or keep saving
+
+With the description prompt enabled:
+
+```text
+CTRL + S → “M6 holes”       → v05_M6 holes
+CTRL + S → “more clearance” → v06_more clearance
+```
+
+Leave the description blank for a plain numbered revision. Cancel the prompt to
+leave without creating that revision.
+
+Want fewer prompts? Set:
+
+```json
+"prompt_revision_name": false
+```
+
+Your next exports will use names such as `v07`, `v08`, and `v09`. ⚡
+
+## 🎛️ Make it fit your workflow
+
+Settings are created on first run. Stop ZenExport before editing them, then restart it.
+
+- **Windows:** `%LOCALAPPDATA%\ZenExport\config.json`
+- **macOS:** `~/Library/Application Support/ZenExport/config.json`
+
+Edit the existing `settings` section and preserve your saved project contexts:
+
+```json
+"settings": {
+  "intercept_native_save": true,
+  "profile": "full",
+  "mesh_quality": "high",
+  "thumbnail": true,
+  "open_folder": true,
+  "prompt_revision_name": true
+}
+```
+
+| Setting | What it controls |
+| --- | --- |
+| `intercept_native_save` | Route native Save, including CTRL + S on Windows, through ZenExport |
+| `profile` | Choose `full`, `cad`, or `backup` |
+| `mesh_quality` | Choose `low`, `medium`, or `high` |
+| `thumbnail` | Save a viewport preview |
+| `open_folder` | Open the project folder after a completed export |
+| `prompt_revision_name` | Ask for an optional revision description |
+
+| Profile | Whole-design F3D | Whole-design STEP | Body STLs | Component F3D/STEP |
+| --- | --- | --- | --- | --- |
+| 🧰 `full` | ✅ | ✅ | ✅ | ✅ |
+| 📐 `cad` | ✅ | ✅ | — | — |
+| 💾 `backup` | ✅ | — | — | — |
+
+## 🔄 Already have older ZenExport projects?
+
+The update can recover older destination bindings and reorganize supported older
+layouts into matching **CAD**, **Models**, and **_Info** revision folders.
+
+Migration checks for conflicting files, preserves native file contents, and keeps
+copies of original reports. Interrupted metadata updates can resume from a journal.
+If an old export has no reliable revision information, it is retained under
+`_Legacy_unversioned`. Only empty old folders are removed.
+
+Existing `session_config.json` bindings are imported without changing the original
+file. Ambiguous matches offer a choice of saved destinations. A missing destination
+is reported so you can reconnect its drive or deliberately choose another folder.
+
+A copied design can inherit its original project's context. Use **Choose Destination**
+when you intend to start an independent project.
+
+## 🔍 When something needs attention
+
+The revision's `_Info` folder contains:
+
+- **`export_manifest.json`:** the export summary and file results.
+- **`export_events.jsonl`:** completed per-file outcomes, useful after interruption.
+- **`_preview.png`:** the optional viewport image.
+
+The application log, **`zenexport.log`**, lives beside `config.json` and rotates
+automatically. Configuration writes use atomic replacement; invalid configuration
+is reported rather than silently discarding remembered destinations.
+
+Failed or interrupted attempts can leave a partial revision for inspection. Retrying
+uses a new number. The last-success marker advances only when every required export
+succeeds. An optional preview failure is recorded separately.
+
+## 🧪 Current release status
+
+**6.1.2 is a preview update.**
+
+**65 automated tests pass locally**, covering simulated Fusion events, filesystem
+behavior, migration, packaging and STL units across mm, cm, meters and inches.
+The previous release passed Windows CI on Python 3.10 and 3.13; check
+[GitHub Actions](https://github.com/EsKay-Labs/ZenExport/actions) for this update's result.
+
+Earlier 6.0.3 and 6.1.0 exports succeeded in the local Fusion session. The final 6.1.2
+save workflow and full recovery checks by reopening exported F3D/STEP files still
+need live validation. Save interception should be checked against your Fusion version.
+
+Start with a disposable design and retain separate known-good backups.
+
+### A few practical details
+
+- Local export does not guarantee clearing Fusion's modified flag or rename an Untitled tab;
+  closing the design may still prompt for a native save.
+- STL exports cover visible native BRep bodies. Repeated instances share part exports;
+  STLs use component coordinates rather than placed assembly coordinates.
+- STL coordinates are explicitly exported in millimeters; import new files at 100% scale.
+- Linked assemblies, external references and configurations need additional recovery validation.
+- Mesh bodies and drawings are outside the per-part export workflow.
+- Cancellation takes effect between export files when Fusion delivers it.
+- No automatic cleanup deletes older revisions. Full snapshots consume additional disk space.
+- macOS compatibility and MSI installation have not been verified. No MSI is supplied.
+- ZenExport does not change Autodesk's licensing requirements or limits.
+- Independent concurrent Fusion runtimes should use separate `ZENEXPORT_DATA_DIR` locations.
+
+## 🤝 Made for makers
+
+Useful bug reports include your Fusion version, what you tried, and the relevant
+error message. Remove personal paths or project details before sharing logs.
+
+[Open an issue](https://github.com/EsKay-Labs/ZenExport/issues) or contribute an improvement.
+
+For development and packaging details:
+
+- [Development checks and live acceptance](https://github.com/EsKay-Labs/ZenExport/blob/main/DEVELOPMENT.md)
+- [Architecture and audit](https://github.com/EsKay-Labs/ZenExport/blob/main/.agent/knowledge/architecture.md)
+- [Project plan](https://github.com/EsKay-Labs/ZenExport/blob/main/PROJECT-PLAN.md)
+- [Distribution guide](https://github.com/EsKay-Labs/ZenExport/blob/main/HOW_TO_BUILD_MSI.md)
+- [Release notes](https://github.com/EsKay-Labs/ZenExport/blob/main/RELEASE_NOTES.md)
+
+**Free. Open source. MIT licensed. Happy making! 🛠️🖨️**
