@@ -91,9 +91,11 @@ class ContextStore:
         atomic_json(self.path, self.data)
 
     def update_settings(self, changes):
-        self.settings = validate_settings(dict(self.settings, **changes))
-        self.data["settings"] = self.settings
-        self.save()
+        settings = validate_settings(dict(self.settings, **changes))
+        # Write first: a failed save must leave the running settings unchanged.
+        atomic_json(self.path, dict(self.data, settings=settings))
+        self.settings = settings
+        self.data["settings"] = settings
 
     def import_legacy(self, path):
         """Copy old bindings into writable state, preserving the original file."""
