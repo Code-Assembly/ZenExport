@@ -1,57 +1,83 @@
-# 📣 ZenExport Marketing Kit
+# ZenExport community sharing kit
 
-Here are a few options for sharing the project. Pick the one that fits the vibe of the community you are posting to!
+Publication drafts, not a record of completed posts. Disclose ownership and check
+each community's current rules and your posting history before submitting.
 
----
+The current approved maker-facing copy is in [REDDIT_UPDATE.md](REDDIT_UPDATE.md).
+It leads with CTRL + S and shows the optional revision note above MyProjectFolder,
+with CAD, Models and _Info underneath. The alternatives below are older drafts.
 
-## Option 1: The "Problem Solver" Hook (Best for r/Fusion360)
+## Open-source community
 
-**Title:** I built the "Save As" feature Fusion 360 forgot: Auto-Backup + Versioning + STLs in 1 click
+Title: ZenExport: an MIT-licensed Fusion add-in for versioned F3D/STEP and STL exports
 
-**Body:**
-Hey everyone! 👋
+I'm sharing ZenExport, my free, MIT-licensed Python add-in for Autodesk Fusion,
+as a gift to the CAD and 3D-printing community.
 
-I got tired of the "10 active document limit" dancing and the fear of saving over a file I needed. So I wrote a script called **ZenExport**.
+It groups each requested export into matching revision folders:
 
-It basically acts like a "Super Save" button:
+```text
+MyProject/
+  CAD/v05_M6 holes/       # F3D + STEP, including component CAD exports
+  Models/v05_M6 holes/    # visible native BRep bodies as STL
+  _Info/v05_M6 holes/     # preview, file results and timings
+```
 
-1.  **Time Machine:** It saves your source files (`.f3d` & `.step`) into versioned folders (`v01`, `v02`...) so you never lose history.
-2.  **Auto-STL:** It exports every body in your design as an individual `.stl` automatically (great for slicing).
-3.  **Visuals:** It takes a snapshot of your viewport so the folder has a thumbnail.
+It remembers a design's destination, offers an optional description on each save,
+and creates a fresh numbered revision. The latest refactor adds staged file writes,
+partial-failure reporting, legacy destination recovery, and layout migration.
+The add-in runtime uses Python's standard library plus Fusion's API.
 
-It's free and open source. Just wanted to share it with the community in case it saves someone else a headache! 🧘
+6.1.1 is a preview. The 63 automated tests pass locally, but full recovery checks
+by reopening the exported files are still pending. Try a disposable design first.
+Local export does not perform Fusion's native/cloud save or change Autodesk's
+licensing limits. STLs use native component coordinates.
 
-**Link:** https://github.com/EsKay-Labs/ZenExport
+Source and instructions: https://github.com/EsKay-Labs/ZenExport
 
----
+Preview download: https://github.com/EsKay-Labs/ZenExport/releases/tag/v6.1.1
 
-## Option 2: The "Short & Sweet" (Best for Maker Forums/Discord)
+## Maker forum
 
-**Title:** ZenExport - Free tool to automate Fusion 360 local backups
+Title: A free Fusion tool for keeping matching CAD and STL revisions
 
-**Body:**
-Just released a free open-source script for Fusion 360 called **ZenExport**.
-It automates exporting your design to your local drive.
+I made ZenExport for the repetitive step between editing a Fusion design and
+preparing files for printing, and I'm sharing it free under the MIT license.
 
-**Features:**
+One export creates a numbered F3D/STEP snapshot under CAD and the matching visible
+native-body STLs under Models. You can label the revision, for example "M6 holes",
+and the same label appears in both folders. Preview images and export reports stay
+separate under _Info. Existing revisions are retained.
 
-- ✅ Auto-Versions your F3D/STEP files (keeps history safe).
-- ✅ Exports all bodies as STLs instantly.
-- ✅ Remembers your last folder (updates silently).
-- ✅ No cloud limits.
+The current 6.1.1 preview includes 63 passing automated tests. Live recovery checks
+are still pending, so start with a disposable design and retain your usual backups.
+STLs are individual parts in component coordinates. This does not perform a native
+Fusion save or replace Autodesk's licensing requirements.
 
-Download it here: https://github.com/EsKay-Labs/ZenExport
+Source, download and instructions: https://github.com/EsKay-Labs/ZenExport
 
----
+## Short announcement
 
-## Option 3: Twitter / Social Media
+ZenExport 6.1.1 preview is available: a free MIT-licensed Fusion add-in for matching
+named CAD/STL revisions, local F3D/STEP exports, and export reports. Shared by
+EsKay-Labs as a gift to the maker community. Full exported-file recovery validation
+is still pending. https://github.com/EsKay-Labs/ZenExport
 
-**Text:**
-Finally fixed my Fusion 360 workflow. 🛠️
-Built "ZenExport" to automate local backups with version control and auto-STL generation.
-No more manual exports. 🧘
+## Publication constraints checked on 2026-10-24
 
-Grab it free: https://github.com/EsKay-Labs/ZenExport
-#Fusion360 #3DPrinting #Python #OpenSource
+- r/Fusion360: the visible rule prohibits self-promotion and product promotion.
+  Do not publish a promotional post without moderator permission.
+- r/opensource: its low-effort rule explicitly prohibits AI-generated content;
+  do not submit these AI-assisted drafts there.
+  https://www.reddit.com/r/opensource/
+- r/maker: self-promotional posts are prohibited.
+  https://www.reddit.com/r/maker/
+- r/3Dprinting: the community rules prohibit software posts seeking beta testers
+  or feedback. Do not post this preview announcement there.
+  https://www.reddit.com/r/3Dprinting/wiki/communityrules/
+- Prusa forum: the guidelines prohibit spam and unapproved self-promotion.
+  Obtain moderator clearance before a promotional announcement.
+  https://forum.prusa3d.com/forum/english-forum-general-discussion-announcements-and-releases/prusa-forum-guidelines-and-rules/
 
----
+A free license is not an exemption from community rules. Do not claim "best",
+guaranteed backups, instant exports, licensing-limit bypasses, or automatic cloud saves.

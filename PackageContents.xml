@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Fusion360" ProductType="Application"
+    Name="ZenExport"
+    Description="Versioned local backup and export tool."
+    AppVersion="6.1.2"
+    Author="ZenExport Team"
+    ProductCode="{A7C6F287-8B95-40B1-924C-BC2475F7CB62}"
+    UpgradeCode="{6A2B6869-32F9-4674-9273-04724E683074}">
+
+    <CompanyDetails Name="ZenExport"/>
+
+    <Components>
+        <RuntimeRequirements OS="Win64|MacOS" Platform="Fusion360"/>
+
+        <ComponentEntry
+            AppName="ZenExport"
+            Version="6.1.2"
+            ModuleName="./Contents/ZenExport.py"
+            LoadOnCommandInvocation="False"
+            LoadOnStartup="True">
+            <Description>Automated Local Backup and Export Tool</Description>
+        </ComponentEntry>
+    </Components>
+</ApplicationPackage>

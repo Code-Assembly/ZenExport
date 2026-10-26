@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Name="ZenExport for Fusion 360" Language="1033" Version="6.1.2" Manufacturer="ZenExport Team" UpgradeCode="6A2B6869-32F9-4674-9273-04724E683074">
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        <MediaTemplate EmbedCab="yes" />
+
+        <Feature Id="ProductFeature" Title="ZenExport" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+        </Feature>
+    </Product>
+
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="CommonAppDataFolder">
+                <Directory Id="AutodeskDir" Name="Autodesk">
+                    <Directory Id="PluginsDir" Name="ApplicationPlugins">
+                        <Directory Id="BundleDir" Name="ZenExport.bundle">
+                            <Directory Id="ContentsDir" Name="Contents">
+                                <Directory Id="RuntimeDir" Name="zenexport" />
+                            </Directory>
+                        </Directory>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+    </Fragment>
+
+    <Fragment>
+        <ComponentGroup Id="ProductComponents">
+            <!-- Main Package Manifest -->
+            <Component Id="PackageManifest" Directory="BundleDir" Guid="*" Win64="yes">
+                <File Id="PackageContents.xml" Source="PackageContents.xml" KeyPath="yes" />
+            </Component>
+
+            <!-- Script Files -->
+            <Component Id="EntryPoint" Directory="ContentsDir" Guid="*" Win64="yes">
+                <File Id="ZenExport.py" Source="ZenExport.py" KeyPath="yes" />
+            </Component>
+            <Component Id="FusionManifest" Directory="ContentsDir" Guid="*" Win64="yes">
+                <File Id="ZenExport.manifest" Source="ZenExport.manifest" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeInit" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeInitFile" Source="zenexport/__init__.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeConfig" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeConfigFile" Source="zenexport/config.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimePaths" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimePathsFile" Source="zenexport/paths.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeStorage" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeStorageFile" Source="zenexport/storage.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeModel" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeModelFile" Source="zenexport/model.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeExporter" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeExporterFile" Source="zenexport/exporter.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeAddin" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeAddinFile" Source="zenexport/addin.py" KeyPath="yes" />
+            </Component>
+            <Component Id="RuntimeLayout" Directory="RuntimeDir" Guid="*" Win64="yes">
+                <File Id="RuntimeLayoutFile" Source="zenexport/layout.py" KeyPath="yes" />
+            </Component>
+
+        </ComponentGroup>
+    </Fragment>
+</Wix>
