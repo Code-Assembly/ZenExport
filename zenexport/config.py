@@ -7,6 +7,7 @@ COMMAND_ID = "ZenExport_Cmd_v5"  # Preserve existing Fusion command customizatio
 COMMAND_NAME = "ZenExport Save"
 DESTINATION_COMMAND_ID = "ZenExport_ChooseDestination"
 PANEL_ID = "SolidScriptsAddinsPanel"
+SETTINGS_MENU_ID = "ZenExport_Settings"
 ATTRIBUTE_GROUP = "ZenExport"
 LEGACY_REVISION_DIRECTORY = "Revisions"
 CAD_DIRECTORY = "CAD"
@@ -20,7 +21,14 @@ DEFAULT_SETTINGS = {
     "thumbnail": True,
     "open_folder": True,
     "prompt_revision_name": True,
+    "debug_log": False,
 }
+# Check boxes shown in Utilities > Add-Ins > ZenExport Settings.
+SETTING_TOGGLES = (
+    ("open_folder", "Open folder after save"),
+    ("prompt_revision_name", "Notes on save"),
+    ("debug_log", "Record debug log"),
+)
 PROFILES = {
     "full": {"step": True, "stl": True, "components": True},
     "cad": {"step": True, "stl": False, "components": False},
@@ -33,7 +41,7 @@ def validate_settings(settings):
     result = dict(DEFAULT_SETTINGS)
     if not isinstance(settings, dict):
         raise ValueError("settings must be a JSON object")
-    for key in ("intercept_native_save", "thumbnail", "open_folder", "prompt_revision_name"):
+    for key in ("intercept_native_save", "thumbnail", "open_folder", "prompt_revision_name", "debug_log"):
         if key in settings:
             if not isinstance(settings[key], bool):
                 raise ValueError(f"{key} must be true or false")

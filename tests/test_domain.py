@@ -184,7 +184,7 @@ class StorageTests(unittest.TestCase):
 
     def test_settings_validate_types_and_profiles(self):
         for value in ({"profile": "fast"}, {"mesh_quality": "ultra"}, {"open_folder": "false"},
-                      {"prompt_revision_name": "false"}):
+                      {"prompt_revision_name": "false"}, {"debug_log": "false"}):
             with self.assertRaises(ValueError):
                 validate_settings(value)
 
