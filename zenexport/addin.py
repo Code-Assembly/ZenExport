@@ -9,8 +9,8 @@ import uuid
 import adsk.core
 import adsk.fusion
 
-from .config import (COMMAND_ID, COMMAND_NAME, DESTINATION_COMMAND_ID,
-                     PANEL_ID, SAVE_COMMANDS, VERSION)
+from .config import (COMMAND_ID, COMMAND_NAME, DESTINATION_COMMAND_ID, PANEL_ID,
+                     SAVE_COMMANDS, SETTING_TOGGLES, SETTINGS_MENU_ID, VERSION)
 from .exporter import execute_export, plan_exports
 from .layout import migrate_project_layout
 from .model import bind_context, capture_snapshot, file_identity, resolve_context
@@ -24,8 +24,8 @@ class ZenExportAddin:
         self.app = adsk.core.Application.get()
         self.ui = self.app.userInterface
         self.directory = runtime_directory()
-        self.logger = create_logger(self.directory)
         self.store = ContextStore(self.directory, self.source_directory / "session_config.json")
+        self.logger = create_logger(self.directory, self.store.settings["debug_log"])
         self.bindings = []
         self.command_definitions = []
         self.controls = []
@@ -68,7 +68,7 @@ class ZenExportAddin:
 
     def start(self):
         if not self.logger.handlers:
-            self.logger = create_logger(self.directory)
+            self.logger = create_logger(self.directory, self.store.settings["debug_log"])
         self.running = True
         try:
             for command_id, name, force_new in (
@@ -86,6 +86,7 @@ class ZenExportAddin:
                 panel = self.ui.allToolbarPanels.itemById(PANEL_ID)
                 if panel:
                     self.controls.append(panel.controls.addCommand(definition))
+            self.add_settings_menu()
             if self.store.settings["intercept_native_save"]:
                 self.attach(self.ui.commandStarting, adsk.core.ApplicationCommandEventHandler,
                             self.on_command_starting)
@@ -93,6 +94,27 @@ class ZenExportAddin:
         except Exception:
             self.stop()
             raise
+
+    def add_settings_menu(self):
+        panel = self.ui.allToolbarPanels.itemById(PANEL_ID)
+        if not panel:
+            return
+        previous = panel.controls.itemById(SETTINGS_MENU_ID)
+        if previous:
+            previous.deleteMe()
+        menu = panel.controls.addDropDown("ZenExport Settings", "", SETTINGS_MENU_ID)
+        self.controls.append(menu)
+        for key, label in SETTING_TOGGLES:
+            command_id = "ZenExport_Setting_" + key
+            previous = self.ui.commandDefinitions.itemById(command_id)
+            if previous:
+                previous.deleteMe()
+            definition = self.ui.commandDefinitions.addCheckBoxDefinition(
+                command_id, label, label, self.store.settings[key])
+            self.command_definitions.append(definition)
+            self.attach(definition.commandCreated, adsk.core.CommandCreatedEventHandler,
+                        lambda args, key=key: self.on_setting_created(args, key))
+            menu.controls.addCommand(definition)
 
     def stop(self):
         self.running = False
@@ -123,6 +145,20 @@ class ZenExportAddin:
                     lambda event: self.request_export(force_new), command)
         self.attach(command.destroy, adsk.core.CommandEventHandler,
                     lambda event: self.detach_group(command), command)
+
+    def on_setting_created(self, args, key):
+        command = args.command
+        self.attach(command.execute, adsk.core.CommandEventHandler,
+                    lambda event: self.set_setting(
+                        key, command.parentCommandDefinition.controlDefinition.isChecked), command)
+        self.attach(command.destroy, adsk.core.CommandEventHandler,
+                    lambda event: self.detach_group(command), command)
+
+    def set_setting(self, key, value):
+        self.store.update_settings({key: value})
+        if key == "debug_log":
+            self.logger = create_logger(self.directory, value)
+        self.logger.info("Setting %s=%s", key, value)
 
     def on_command_starting(self, args):
         if args.commandId in SAVE_COMMANDS:

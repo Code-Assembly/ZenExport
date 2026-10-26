@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 from fakes import Body, Component, design
 from zenexport.model import bind_context
-from zenexport.storage import atomic_json
+from zenexport.storage import ContextStore, atomic_json
 
 
 class Event:
@@ -53,6 +53,33 @@ class Definitions:
         definition = Definition()
         self.items[key] = definition
         return definition
+
+    def addCheckBoxDefinition(self, key, name, tooltip, checked):
+        definition = Definition()
+        definition.name = name
+        definition.controlDefinition = SimpleNamespace(isChecked=checked)
+        self.items[key] = definition
+        return definition
+
+
+class Controls:
+    def __init__(self):
+        self.items = {}
+        self.commands = []
+
+    def itemById(self, key):
+        value = self.items.get(key)
+        return value if value and value.isValid else None
+
+    def addCommand(self, definition):
+        self.commands.append(definition)
+        return Definition()
+
+    def addDropDown(self, text, resource, key):
+        menu = Definition()
+        menu.controls = Controls()
+        self.items[key] = menu
+        return menu
 
 
 class Manager:
@@ -388,6 +415,49 @@ class AddinTests(unittest.TestCase):
                 if name == "_zenexport_runtime" or name.startswith("_zenexport_runtime."):
                     del sys.modules[name]
         self.assertEqual(self.addin.ui.commandStarting.handlers, [])
+
+    def start_with_settings_menu(self):
+        self.addin.stop()
+        self.panel = SimpleNamespace(controls=Controls())
+        self.app.userInterface.allToolbarPanels = SimpleNamespace(
+            itemById=lambda key: self.panel if key == "SolidScriptsAddinsPanel" else None)
+        self.addin.start()
+        return self.panel.controls.items["ZenExport_Settings"].controls.commands
+
+    def click(self, definition, checked):
+        definition.controlDefinition.isChecked = checked
+        command = SimpleNamespace(execute=Event(), destroy=Event(), parentCommandDefinition=definition)
+        definition.commandCreated.fire(SimpleNamespace(command=command))
+        command.execute.fire(None)
+        command.destroy.fire(None)
+
+    def test_settings_menu_has_a_check_box_per_setting(self):
+        toggles = self.start_with_settings_menu()
+        self.assertEqual([item.name for item in toggles],
+                         ["Open folder after save", "Notes on save", "Record debug log"])
+        self.assertEqual([item.controlDefinition.isChecked for item in toggles], [False, True, False])
+
+    def test_ticked_setting_is_saved_for_the_next_start(self):
+        toggles = self.start_with_settings_menu()
+        self.click(toggles[0], True)
+        self.assertTrue(self.addin.store.settings["open_folder"])
+        self.assertTrue(ContextStore(self.addin.directory).settings["open_folder"])
+
+    def test_stop_removes_the_settings_menu_and_its_check_boxes(self):
+        toggles = self.start_with_settings_menu()
+        menu = self.panel.controls.items["ZenExport_Settings"]
+        self.addin.stop()
+        self.assertFalse(menu.isValid)
+        self.assertFalse(any(item.isValid for item in toggles))
+
+    def test_debug_log_is_off_by_default_and_records_once_ticked(self):
+        log = self.addin.directory / "zenexport.log"
+        self.addin.request_export()
+        self.assertFalse(log.exists())
+        toggles = self.start_with_settings_menu()
+        self.click(toggles[2], True)
+        self.addin.request_export()
+        self.assertIn("Starting export", log.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
