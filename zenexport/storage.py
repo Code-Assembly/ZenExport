@@ -42,17 +42,18 @@ def atomic_json(path, data):
             temporary.unlink()
 
 
-def create_logger(directory):
+def create_logger(directory, debug=False):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("ZenExport")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO if debug else logging.WARNING)
     logger.propagate = False
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
         handler.close()
+    # delay: with debug off, the file only appears once a warning or error is logged.
     handler = RotatingFileHandler(directory / "zenexport.log", maxBytes=2_000_000,
-                                  backupCount=3, encoding="utf-8")
+                                  backupCount=3, encoding="utf-8", delay=True)
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     logger.addHandler(handler)
     return logger
@@ -88,6 +89,11 @@ class ContextStore:
 
     def save(self):
         atomic_json(self.path, self.data)
+
+    def update_settings(self, changes):
+        self.settings = validate_settings(dict(self.settings, **changes))
+        self.data["settings"] = self.settings
+        self.save()
 
     def import_legacy(self, path):
         """Copy old bindings into writable state, preserving the original file."""
