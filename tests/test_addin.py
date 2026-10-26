@@ -54,32 +54,17 @@ class Definitions:
         self.items[key] = definition
         return definition
 
-    def addCheckBoxDefinition(self, key, name, tooltip, checked):
-        definition = Definition()
-        definition.name = name
-        definition.controlDefinition = SimpleNamespace(isChecked=checked)
-        self.items[key] = definition
-        return definition
 
-
-class Controls:
+class Inputs:
     def __init__(self):
         self.items = {}
-        self.commands = []
+
+    def addBoolValueInput(self, key, name, is_check_box, resource, value):
+        self.items[key] = SimpleNamespace(name=name, value=value)
+        return self.items[key]
 
     def itemById(self, key):
-        value = self.items.get(key)
-        return value if value and value.isValid else None
-
-    def addCommand(self, definition):
-        self.commands.append(definition)
-        return Definition()
-
-    def addDropDown(self, text, resource, key):
-        menu = Definition()
-        menu.controls = Controls()
-        self.items[key] = menu
-        return menu
+        return self.items.get(key)
 
 
 class Manager:
@@ -416,46 +401,68 @@ class AddinTests(unittest.TestCase):
                     del sys.modules[name]
         self.assertEqual(self.addin.ui.commandStarting.handlers, [])
 
-    def start_with_settings_menu(self):
-        self.addin.stop()
-        self.panel = SimpleNamespace(controls=Controls())
-        self.app.userInterface.allToolbarPanels = SimpleNamespace(
-            itemById=lambda key: self.panel if key == "SolidScriptsAddinsPanel" else None)
-        self.addin.start()
-        return self.panel.controls.items["ZenExport_Settings"].controls.commands
-
-    def click(self, definition, checked):
-        definition.controlDefinition.isChecked = checked
-        command = SimpleNamespace(execute=Event(), destroy=Event(), parentCommandDefinition=definition)
+    def open_settings(self):
+        command = SimpleNamespace(commandInputs=Inputs(), execute=Event(), destroy=Event())
+        definition = self.addin.ui.commandDefinitions.itemById("ZenExport_Settings")
         definition.commandCreated.fire(SimpleNamespace(command=command))
-        command.execute.fire(None)
+        return command
+
+    def press_ok(self, command):
+        command.execute.fire(SimpleNamespace(command=command))
         command.destroy.fire(None)
 
-    def test_settings_menu_has_a_check_box_per_setting(self):
-        toggles = self.start_with_settings_menu()
-        self.assertEqual([item.name for item in toggles],
+    def test_settings_dialog_has_a_check_box_per_setting(self):
+        inputs = self.open_settings().commandInputs.items
+        self.assertEqual([item.name for item in inputs.values()],
                          ["Open folder after save", "Notes on save", "Record debug log"])
-        self.assertEqual([item.controlDefinition.isChecked for item in toggles], [False, True, False])
+        self.assertEqual([item.value for item in inputs.values()], [False, True, False])
 
-    def test_ticked_setting_is_saved_for_the_next_start(self):
-        toggles = self.start_with_settings_menu()
-        self.click(toggles[0], True)
+    def test_ok_saves_settings_for_the_next_start(self):
+        command = self.open_settings()
+        command.commandInputs.items["open_folder"].value = True
+        self.press_ok(command)
         self.assertTrue(self.addin.store.settings["open_folder"])
         self.assertTrue(ContextStore(self.addin.directory).settings["open_folder"])
 
-    def test_stop_removes_the_settings_menu_and_its_check_boxes(self):
-        toggles = self.start_with_settings_menu()
-        menu = self.panel.controls.items["ZenExport_Settings"]
+    def test_cancel_leaves_settings_unchanged(self):
+        command = self.open_settings()
+        command.commandInputs.items["prompt_revision_name"].value = False
+        command.destroy.fire(None)
+        self.assertTrue(self.addin.store.settings["prompt_revision_name"])
+
+    def test_failed_settings_save_keeps_the_running_settings(self):
+        command = self.open_settings()
+        command.commandInputs.items["prompt_revision_name"].value = False
+        with patch("zenexport.storage.atomic_json", side_effect=OSError("disk full")):
+            self.press_ok(command)
+        self.assertTrue(self.addin.store.settings["prompt_revision_name"])
+        self.assertIn("disk full", self.messages[-1][0])
+
+    def test_settings_command_failure_keeps_save_interception(self):
         self.addin.stop()
-        self.assertFalse(menu.isValid)
-        self.assertFalse(any(item.isValid for item in toggles))
+        original = self.addin.ui.commandDefinitions.addButtonDefinition
+
+        def add(key, *args):
+            if key == "ZenExport_Settings":
+                raise RuntimeError("settings unavailable")
+            return original(key, *args)
+
+        self.addin.ui.commandDefinitions.addButtonDefinition = add
+        self.addin.start()
+        self.assertEqual(len(self.addin.ui.commandStarting.handlers), 1)
+
+    def test_stop_removes_the_settings_command(self):
+        definition = self.addin.ui.commandDefinitions.itemById("ZenExport_Settings")
+        self.addin.stop()
+        self.assertFalse(definition.isValid)
 
     def test_debug_log_is_off_by_default_and_records_once_ticked(self):
         log = self.addin.directory / "zenexport.log"
         self.addin.request_export()
         self.assertFalse(log.exists())
-        toggles = self.start_with_settings_menu()
-        self.click(toggles[2], True)
+        command = self.open_settings()
+        command.commandInputs.items["debug_log"].value = True
+        self.press_ok(command)
         self.addin.request_export()
         self.assertIn("Starting export", log.read_text(encoding="utf-8"))
 

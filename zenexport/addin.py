@@ -10,7 +10,7 @@ import adsk.core
 import adsk.fusion
 
 from .config import (COMMAND_ID, COMMAND_NAME, DESTINATION_COMMAND_ID, PANEL_ID,
-                     SAVE_COMMANDS, SETTING_TOGGLES, SETTINGS_MENU_ID, VERSION)
+                     SAVE_COMMANDS, SETTING_TOGGLES, SETTINGS_COMMAND_ID, VERSION)
 from .exporter import execute_export, plan_exports
 from .layout import migrate_project_layout
 from .model import bind_context, capture_snapshot, file_identity, resolve_context
@@ -86,7 +86,11 @@ class ZenExportAddin:
                 panel = self.ui.allToolbarPanels.itemById(PANEL_ID)
                 if panel:
                     self.controls.append(panel.controls.addCommand(definition))
-            self.add_settings_menu()
+            try:
+                self.add_settings_command()
+            except Exception:
+                # Settings are optional: Save interception must still start without them.
+                self.logger.exception("Could not add the ZenExport: Settings command")
             if self.store.settings["intercept_native_save"]:
                 self.attach(self.ui.commandStarting, adsk.core.ApplicationCommandEventHandler,
                             self.on_command_starting)
@@ -95,26 +99,20 @@ class ZenExportAddin:
             self.stop()
             raise
 
-    def add_settings_menu(self):
-        panel = self.ui.allToolbarPanels.itemById(PANEL_ID)
-        if not panel:
-            return
-        previous = panel.controls.itemById(SETTINGS_MENU_ID)
+    def add_settings_command(self):
+        previous = self.ui.commandDefinitions.itemById(SETTINGS_COMMAND_ID)
         if previous:
             previous.deleteMe()
-        menu = panel.controls.addDropDown("ZenExport Settings", "", SETTINGS_MENU_ID)
-        self.controls.append(menu)
-        for key, label in SETTING_TOGGLES:
-            command_id = "ZenExport_Setting_" + key
-            previous = self.ui.commandDefinitions.itemById(command_id)
+        definition = self.ui.commandDefinitions.addButtonDefinition(
+            SETTINGS_COMMAND_ID, "ZenExport: Settings", "Choose what ZenExport does on each save.", "")
+        self.command_definitions.append(definition)
+        self.attach(definition.commandCreated, adsk.core.CommandCreatedEventHandler, self.on_settings_created)
+        panel = self.ui.allToolbarPanels.itemById(PANEL_ID)
+        if panel:
+            previous = panel.controls.itemById(SETTINGS_COMMAND_ID)
             if previous:
                 previous.deleteMe()
-            definition = self.ui.commandDefinitions.addCheckBoxDefinition(
-                command_id, label, label, self.store.settings[key])
-            self.command_definitions.append(definition)
-            self.attach(definition.commandCreated, adsk.core.CommandCreatedEventHandler,
-                        lambda args, key=key: self.on_setting_created(args, key))
-            menu.controls.addCommand(definition)
+            self.controls.append(panel.controls.addCommand(definition))
 
     def stop(self):
         self.running = False
@@ -146,19 +144,20 @@ class ZenExportAddin:
         self.attach(command.destroy, adsk.core.CommandEventHandler,
                     lambda event: self.detach_group(command), command)
 
-    def on_setting_created(self, args, key):
+    def on_settings_created(self, args):
         command = args.command
+        for key, label in SETTING_TOGGLES:
+            command.commandInputs.addBoolValueInput(key, label, True, "", self.store.settings[key])
         self.attach(command.execute, adsk.core.CommandEventHandler,
-                    lambda event: self.set_setting(
-                        key, command.parentCommandDefinition.controlDefinition.isChecked), command)
+                    lambda event: self.save_settings(event.command.commandInputs), command)
         self.attach(command.destroy, adsk.core.CommandEventHandler,
                     lambda event: self.detach_group(command), command)
 
-    def set_setting(self, key, value):
-        self.store.update_settings({key: value})
-        if key == "debug_log":
-            self.logger = create_logger(self.directory, value)
-        self.logger.info("Setting %s=%s", key, value)
+    def save_settings(self, inputs):
+        changes = {key: inputs.itemById(key).value for key, _ in SETTING_TOGGLES}
+        self.store.update_settings(changes)
+        self.logger = create_logger(self.directory, self.store.settings["debug_log"])
+        self.logger.info("Settings saved: %s", changes)
 
     def on_command_starting(self, args):
         if args.commandId in SAVE_COMMANDS:

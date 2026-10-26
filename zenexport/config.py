@@ -7,7 +7,7 @@ COMMAND_ID = "ZenExport_Cmd_v5"  # Preserve existing Fusion command customizatio
 COMMAND_NAME = "ZenExport Save"
 DESTINATION_COMMAND_ID = "ZenExport_ChooseDestination"
 PANEL_ID = "SolidScriptsAddinsPanel"
-SETTINGS_MENU_ID = "ZenExport_Settings"
+SETTINGS_COMMAND_ID = "ZenExport_Settings"
 ATTRIBUTE_GROUP = "ZenExport"
 LEGACY_REVISION_DIRECTORY = "Revisions"
 CAD_DIRECTORY = "CAD"
@@ -23,7 +23,6 @@ DEFAULT_SETTINGS = {
     "prompt_revision_name": True,
     "debug_log": False,
 }
-# Check boxes shown in Utilities > Add-Ins > ZenExport Settings.
 SETTING_TOGGLES = (
     ("open_folder", "Open folder after save"),
     ("prompt_revision_name", "Notes on save"),
