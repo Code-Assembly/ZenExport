@@ -184,7 +184,8 @@ class StorageTests(unittest.TestCase):
 
     def test_settings_validate_types_and_profiles(self):
         for value in ({"profile": "fast"}, {"mesh_quality": "ultra"}, {"open_folder": "false"},
-                      {"prompt_revision_name": "false"}, {"debug_log": "false"}):
+                      {"prompt_revision_name": "false"}, {"debug_log": "false"},
+                      {"versioned_models": "false"}):
             with self.assertRaises(ValueError):
                 validate_settings(value)
 
@@ -310,7 +311,7 @@ class SnapshotTests(unittest.TestCase):
 class ExportTests(unittest.TestCase):
     def setUp(self):
         self.snapshot = capture_snapshot(design(Component("Root", [Body("Body")])))
-        self.settings = dict(DEFAULT_SETTINGS, thumbnail=False)
+        self.settings = dict(DEFAULT_SETTINGS, thumbnail=False, versioned_models=True)
 
     @staticmethod
     def write(job, path):
@@ -324,8 +325,47 @@ class ExportTests(unittest.TestCase):
             self.assertEqual((first.name, second.name), ("v01", "v02"))
             self.assertEqual(report["status"], "success")
             self.assertEqual(json.loads((Path(directory) / "_Info" / first.name / "export_manifest.json").read_text())["status"], "success")
-            self.assertTrue((Path(directory) / "Models" / first.name / "Root/Body.stl").is_file())
+            self.assertTrue((Path(directory) / "Models" / first.name / "Body.stl").is_file())
+            self.assertFalse((Path(directory) / "Models" / first.name / "Root").exists())
             self.assertFalse(list(first.rglob(".zenexport-*")))
+
+    def test_versioned_models_keep_component_folders_below_the_root_bodies(self):
+        root = Component("(Unsaved)", [Body("Base")])
+        root.occurrences = [Occurrence(Component("Bracket", [Body("Arm")]), "Bracket:1")]
+        jobs = plan_exports(capture_snapshot(design(root)), "Test", "v01",
+                            dict(DEFAULT_SETTINGS, versioned_models=True))
+        self.assertEqual([job.relative_path for job in jobs if job.format == "stl"],
+                         ["Models/v01/Base.stl", "Models/v01/Bracket/Arm.stl"])
+
+    def test_flat_models_keep_only_the_latest_stls_in_the_models_root(self):
+        settings = dict(self.settings, versioned_models=False)
+        with tempfile.TemporaryDirectory() as directory:
+            models = Path(directory) / "Models"
+            models.mkdir()
+            (models / "Renamed.stl").write_bytes(b"old")
+            (models / "notes.txt").write_bytes(b"user file")
+            folder, report = execute_export(directory, "Test", self.snapshot, settings, self.write)
+            self.assertEqual(report["folders"]["models"], "Models")
+            self.assertEqual(sorted(path.name for path in models.iterdir()), ["Body.stl", "notes.txt"])
+            self.assertEqual(report["removed_files"], ["Models/Renamed.stl"])
+            self.assertFalse((models / folder.name).exists())
+            self.assertTrue((folder / "Test_v01.f3d").is_file())
+
+    def test_flat_models_survive_a_failed_or_cad_only_save(self):
+        settings = dict(self.settings, versioned_models=False)
+        with tempfile.TemporaryDirectory() as directory:
+            execute_export(directory, "Test", self.snapshot, settings, self.write)
+            execute_export(directory, "Test", self.snapshot, settings, lambda *args: False)
+            execute_export(directory, "Test", self.snapshot, dict(settings, profile="cad"), self.write)
+            self.assertEqual((Path(directory) / "Models/Body.stl").read_bytes(), b"fake-export-payload")
+
+    def test_flat_models_prefix_the_component_when_body_names_clash(self):
+        root = Component("Root", [Body("Body1")])
+        root.occurrences = [Occurrence(Component("Bracket", [Body("Body1")]), "Bracket:1")]
+        jobs = plan_exports(capture_snapshot(design(root)), "Test", "v01",
+                            dict(DEFAULT_SETTINGS, versioned_models=False))
+        self.assertEqual([job.relative_path for job in jobs if job.format == "stl"],
+                         ["Models/Body1.stl", "Models/Bracket Body1.stl"])
 
     def test_false_empty_and_missing_exports_are_failures(self):
         for mode in ("false", "empty", "missing", "exception"):
@@ -367,13 +407,16 @@ class ExportTests(unittest.TestCase):
         original_mkdir = Path.mkdir
 
         def restricted_mkdir(path, *args, **kwargs):
-            if path.name == "Root":
+            if path.name == "Part":
                 raise PermissionError("Component directory is read-only")
             return original_mkdir(path, *args, **kwargs)
 
+        root = Component("Root")
+        root.occurrences = [Occurrence(Component("Part", [Body("Body")]), "Part:1")]
+        snapshot = capture_snapshot(design(root))
         with tempfile.TemporaryDirectory() as directory:
             with patch("zenexport.exporter.Path.mkdir", new=restricted_mkdir):
-                folder, report = execute_export(directory, "Test", self.snapshot, self.settings, self.write)
+                folder, report = execute_export(directory, "Test", snapshot, self.settings, self.write)
             self.assertEqual(report["status"], "partial")
             self.assertTrue((folder / "Test_v01.f3d").is_file())
             self.assertIn("read-only", report["files"][-1]["error"])

@@ -20,7 +20,7 @@ def _digest(path):
     return value.digest()
 
 
-def migrate_project_layout(project_folder):
+def migrate_project_layout(project_folder, flat_models=False):
     """Move only inside the named project; never replace a conflicting file.
 
     All source/destination paths and conflicts are checked before moving files.
@@ -142,10 +142,11 @@ def migrate_project_layout(project_folder):
 
     # These exports predate versioned STL snapshots. Keep their identity explicitly
     # unversioned rather than inventing an association with an older CAD revision.
+    # Loose STLs are the current export when STLs are not kept per revision.
     legacy_models = root / MODEL_DIRECTORY
     if legacy_models.is_dir():
         for child in legacy_models.iterdir():
-            if child.name.startswith("_") or is_revision(child):
+            if child.name.startswith("_") or is_revision(child) or (flat_models and child.is_file()):
                 continue
             for file in ([child] if child.is_file() else child.rglob("*")):
                 if file.is_file() and file.suffix.lower() in (".stl", ".f3d", ".f3z", ".step", ".stp"):

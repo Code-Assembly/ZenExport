@@ -21,11 +21,13 @@ DEFAULT_SETTINGS = {
     "thumbnail": True,
     "open_folder": True,
     "prompt_revision_name": True,
+    "versioned_models": False,
     "debug_log": False,
 }
 SETTING_TOGGLES = (
     ("open_folder", "Open folder after save"),
     ("prompt_revision_name", "Notes on save"),
+    ("versioned_models", "Keep STLs per revision"),
     ("debug_log", "Record debug log"),
 )
 PROFILES = {
@@ -40,7 +42,8 @@ def validate_settings(settings):
     result = dict(DEFAULT_SETTINGS)
     if not isinstance(settings, dict):
         raise ValueError("settings must be a JSON object")
-    for key in ("intercept_native_save", "thumbnail", "open_folder", "prompt_revision_name", "debug_log"):
+    for key in ("intercept_native_save", "thumbnail", "open_folder", "prompt_revision_name", "versioned_models",
+                "debug_log"):
         if key in settings:
             if not isinstance(settings[key], bool):
                 raise ValueError(f"{key} must be true or false")

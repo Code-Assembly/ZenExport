@@ -48,12 +48,13 @@ def revision_id(folder_name):
     return f"v{int(match.group(1)):02d}"
 
 
-def reserve_version(project_folder, revision_name=""):
+def reserve_version(project_folder, revision_name="", models=True):
     """Claim a numeric ID atomically, then create its optionally named folder.
 
     CAD, Models, metadata, and older Revisions folders share one sequence. Numeric
     reservation files prevent concurrent saves with different descriptions from
-    claiming the same number. Each revision gets matching CAD/Models/_Info folders.
+    claiming the same number. Each revision gets matching CAD/_Info folders, plus
+    Models when STLs are kept per revision.
     """
     project = Path(project_folder)
     cad = project / CAD_DIRECTORY
@@ -81,5 +82,7 @@ def reserve_version(project_folder, revision_name=""):
             number += 1
             continue
         for category in (CAD_DIRECTORY, MODEL_DIRECTORY, INFO_DIRECTORY):
+            if category == MODEL_DIRECTORY and not models:
+                continue
             (project / category / folder_name).mkdir(parents=True, exist_ok=False)
         return folder

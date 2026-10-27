@@ -261,7 +261,7 @@ class ZenExportAddin:
             if cancelled:
                 return
             revision_name = revision_name.strip()
-        migration = migrate_project_layout(folder)
+        migration = migrate_project_layout(folder, flat_models=not settings["versioned_models"])
         self.store.relocate_manifests(migration["manifest_paths"])
         if migration["moved"]:
             self.logger.info("Organized %d existing files into paired revision folders", migration["moved"])

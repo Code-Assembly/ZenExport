@@ -167,7 +167,8 @@ Edit the existing `settings` section and preserve your saved project contexts:
   "mesh_quality": "high",
   "thumbnail": true,
   "open_folder": true,
-  "prompt_revision_name": true
+  "prompt_revision_name": true,
+  "versioned_models": false
 }
 ```
 
@@ -179,6 +180,7 @@ Edit the existing `settings` section and preserve your saved project contexts:
 | `thumbnail` | Save a viewport preview |
 | `open_folder` | Open the project folder after a completed export |
 | `prompt_revision_name` | Ask for an optional revision description |
+| `versioned_models` | Keep STLs in `Models/<revision>/<component>/`; when off (default), only the latest STLs sit directly in `Models/` |
 
 | Profile | Whole-design F3D | Whole-design STEP | Body STLs | Component F3D/STEP |
 | --- | --- | --- | --- | --- |

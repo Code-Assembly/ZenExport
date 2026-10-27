@@ -414,8 +414,9 @@ class AddinTests(unittest.TestCase):
     def test_settings_dialog_has_a_check_box_per_setting(self):
         inputs = self.open_settings().commandInputs.items
         self.assertEqual([item.name for item in inputs.values()],
-                         ["Open folder after save", "Notes on save", "Record debug log"])
-        self.assertEqual([item.value for item in inputs.values()], [False, True, False])
+                         ["Open folder after save", "Notes on save", "Keep STLs per revision",
+                          "Record debug log"])
+        self.assertEqual([item.value for item in inputs.values()], [False, True, False, False])
 
     def test_ok_saves_settings_for_the_next_start(self):
         command = self.open_settings()

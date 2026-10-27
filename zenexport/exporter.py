@@ -9,7 +9,7 @@ import uuid
 
 from .config import (CAD_DIRECTORY, INFO_DIRECTORY, MANIFEST_FILENAME,
                      MODEL_DIRECTORY, PROFILES, VERSION)
-from .paths import reserve_version, revision_id, sanitize_filename
+from .paths import NameAllocator, reserve_version, revision_id, sanitize_filename
 from .storage import atomic_json
 
 
@@ -28,16 +28,25 @@ def plan_exports(snapshot, name, version, settings, revision_folder=None):
     stem = f"{sanitize_filename(name)}_{version}"
     revision_folder = revision_folder or version
     cad = Path(CAD_DIRECTORY) / revision_folder
-    models = Path(MODEL_DIRECTORY) / revision_folder
+    versioned = settings["versioned_models"]
+    models = Path(MODEL_DIRECTORY) / revision_folder if versioned else Path(MODEL_DIRECTORY)
+    stl_names = NameAllocator()
     info = Path(INFO_DIRECTORY) / revision_folder
     jobs = [ExportJob("f3d", (cad / (stem + ".f3d")).as_posix())]
     if profile["step"]:
         jobs.append(ExportJob("step", (cad / (stem + ".step")).as_posix()))
     for index, target in enumerate(snapshot.components):
-        folder = models / target.folder
+        # The root is named after the document, e.g. "(Unsaved)"; its bodies need no folder.
+        folder = models / target.folder if index else models
         if profile["stl"]:
-            jobs.extend(ExportJob("stl", (folder / (name + ".stl")).as_posix(), body)
-                        for name, body in target.bodies)
+            for body_name, body in target.bodies:
+                if versioned:
+                    path = folder / (body_name + ".stl")
+                else:
+                    if body_name.casefold() in stl_names.used:
+                        body_name = f"{target.folder} {body_name}"
+                    path = models / (stl_names.allocate(body_name) + ".stl")
+                jobs.append(ExportJob("stl", path.as_posix(), body))
         if index and profile["components"]:
             component_cad = cad / "Components" / target.folder
             jobs.extend(ExportJob(fmt, (component_cad / (target.folder + "." + fmt)).as_posix(),
@@ -56,7 +65,8 @@ def execute_export(project_folder, name, snapshot, settings, export_file,
     The manifest, rather than the existence of a version directory, defines success.
     """
     project = Path(project_folder)
-    folder = reserve_version(project, revision_name)
+    versioned = settings["versioned_models"]
+    folder = reserve_version(project, revision_name, models=versioned)
     version = revision_id(folder.name)
     jobs = plan_exports(snapshot, name, version, settings, folder.name)
     manifest_relative = (Path(INFO_DIRECTORY) / folder.name / MANIFEST_FILENAME).as_posix()
@@ -67,7 +77,8 @@ def execute_export(project_folder, name, snapshot, settings, export_file,
         "revision_name": revision_name.strip(), "revision_folder": folder.name,
         "manifest": manifest_relative,
         "folders": {"cad": (Path(CAD_DIRECTORY) / folder.name).as_posix(),
-                    "models": (Path(MODEL_DIRECTORY) / folder.name).as_posix(),
+                    "models": (Path(MODEL_DIRECTORY) / folder.name).as_posix() if versioned
+                              else MODEL_DIRECTORY,
                     "info": (Path(INFO_DIRECTORY) / folder.name).as_posix()},
         "profile": settings["profile"], "mesh_quality": settings["mesh_quality"],
         "fingerprint": snapshot.fingerprint,
@@ -118,6 +129,19 @@ def execute_export(project_folder, name, snapshot, settings, export_file,
             stream.write(json.dumps(item, ensure_ascii=False) + "\n")
     required_failed = any(not item["success"] and item["required"] for item in report["files"])
     report["status"] = "cancelled" if cancelled else ("partial" if required_failed else "success")
+    # Only a complete save replaces the previous STLs; anything less keeps them.
+    if (report["status"] == "success" and not versioned and PROFILES[settings["profile"]]["stl"]
+            and (project / MODEL_DIRECTORY).is_dir()):
+        current = {Path(job.relative_path).name.casefold() for job in jobs if job.format == "stl"}
+        report["removed_files"] = []
+        for stale in (project / MODEL_DIRECTORY).iterdir():
+            if stale.is_file() and stale.suffix.lower() == ".stl" and stale.name.casefold() not in current:
+                try:
+                    stale.unlink()
+                    report["removed_files"].append((Path(MODEL_DIRECTORY) / stale.name).as_posix())
+                except OSError:
+                    if logger:
+                        logger.exception("Could not remove old STL: %s", stale)
     report["seconds"] = round(time.perf_counter() - started, 4)
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     atomic_json(manifest, report)
