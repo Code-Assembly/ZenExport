@@ -32,6 +32,8 @@ def build(output):
     manifest = json.loads(files["Contents/ZenExport.manifest"].read_text(encoding="utf-8-sig"))
     if manifest.get("type") != "addin":
         raise ValueError("Fusion manifest must declare an add-in")
+    if manifest.get("version") != VERSION:
+        raise ValueError("ZenExport.manifest version must match zenexport.config.VERSION")
     destination = output / f"ZenExport-{VERSION}.zip"
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for relative, path in sorted(files.items()):

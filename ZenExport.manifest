@@ -3,6 +3,7 @@
 	"type":	"addin",
 	"runOnStartup":	true,
 	"author":	"ZenExport",
+	"version":	"6.1.2",
 	"description":	{
 		"":	"Automated local backup system with versioning, thumbnails, and instant access."
 	},
