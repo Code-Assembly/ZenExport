@@ -325,8 +325,17 @@ class ExportTests(unittest.TestCase):
             self.assertEqual((first.name, second.name), ("v01", "v02"))
             self.assertEqual(report["status"], "success")
             self.assertEqual(json.loads((Path(directory) / "_Info" / first.name / "export_manifest.json").read_text())["status"], "success")
-            self.assertTrue((Path(directory) / "Models" / first.name / "Root/Body.stl").is_file())
+            self.assertTrue((Path(directory) / "Models" / first.name / "Body.stl").is_file())
+            self.assertFalse((Path(directory) / "Models" / first.name / "Root").exists())
             self.assertFalse(list(first.rglob(".zenexport-*")))
+
+    def test_versioned_models_keep_component_folders_below_the_root_bodies(self):
+        root = Component("(Unsaved)", [Body("Base")])
+        root.occurrences = [Occurrence(Component("Bracket", [Body("Arm")]), "Bracket:1")]
+        jobs = plan_exports(capture_snapshot(design(root)), "Test", "v01",
+                            dict(DEFAULT_SETTINGS, versioned_models=True))
+        self.assertEqual([job.relative_path for job in jobs if job.format == "stl"],
+                         ["Models/v01/Base.stl", "Models/v01/Bracket/Arm.stl"])
 
     def test_flat_models_keep_only_the_latest_stls_in_the_models_root(self):
         settings = dict(self.settings, versioned_models=False)
@@ -398,13 +407,16 @@ class ExportTests(unittest.TestCase):
         original_mkdir = Path.mkdir
 
         def restricted_mkdir(path, *args, **kwargs):
-            if path.name == "Root":
+            if path.name == "Part":
                 raise PermissionError("Component directory is read-only")
             return original_mkdir(path, *args, **kwargs)
 
+        root = Component("Root")
+        root.occurrences = [Occurrence(Component("Part", [Body("Body")]), "Part:1")]
+        snapshot = capture_snapshot(design(root))
         with tempfile.TemporaryDirectory() as directory:
             with patch("zenexport.exporter.Path.mkdir", new=restricted_mkdir):
-                folder, report = execute_export(directory, "Test", self.snapshot, self.settings, self.write)
+                folder, report = execute_export(directory, "Test", snapshot, self.settings, self.write)
             self.assertEqual(report["status"], "partial")
             self.assertTrue((folder / "Test_v01.f3d").is_file())
             self.assertIn("read-only", report["files"][-1]["error"])

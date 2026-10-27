@@ -36,7 +36,8 @@ def plan_exports(snapshot, name, version, settings, revision_folder=None):
     if profile["step"]:
         jobs.append(ExportJob("step", (cad / (stem + ".step")).as_posix()))
     for index, target in enumerate(snapshot.components):
-        folder = models / target.folder
+        # The root is named after the document, e.g. "(Unsaved)"; its bodies need no folder.
+        folder = models / target.folder if index else models
         if profile["stl"]:
             for body_name, body in target.bodies:
                 if versioned:
