@@ -46,7 +46,7 @@ class PathsTests(unittest.TestCase):
             (project / "CAD/v04").mkdir(parents=True)
             (project / "Revisions/v07_older change").mkdir(parents=True)
             folder = reserve_version(project, "τρύπες M6")
-            self.assertEqual(folder.name, "v08_τρύπες M6")
+            self.assertEqual(folder.name, "v08_τρύπες-M6")
             self.assertEqual(revision_id(folder.name), "v08")
             self.assertEqual(reserve_version(project).name, "v09")
 
@@ -64,6 +64,7 @@ class PathsTests(unittest.TestCase):
                 folder = reserve_version(directory, label)
                 self.assertEqual(folder.parent, parent)
                 self.assertLessEqual(len(folder.name), 65)
+                self.assertNotIn(" ", folder.name)
                 self.assertTrue(folder.is_dir())
 
 
@@ -442,7 +443,7 @@ class ExportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             folder, report = execute_export(directory, "Test", snapshot, DEFAULT_SETTINGS, self.write,
                                              revision_name="τρύπες M6")
-            self.assertEqual(folder.name, "v01_τρύπες M6")
+            self.assertEqual(folder.name, "v01_τρύπες-M6")
             self.assertEqual(report["version"], "v01")
             self.assertEqual(report["revision_name"], "τρύπες M6")
             self.assertEqual({path.name for path in Path(directory).iterdir()}, {"CAD", "Models", "_Info"})

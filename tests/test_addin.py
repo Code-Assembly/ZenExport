@@ -331,8 +331,8 @@ class AddinTests(unittest.TestCase):
         self.addin.request_export()
         self.addin.request_export()
         revisions = Path(self.temporary.name) / "CAD"
-        self.assertTrue((revisions / "v01_τρύπες M6/Test_v01.f3d").is_file())
-        self.assertTrue((revisions / "v02_wider base/Test_v02.f3d").is_file())
+        self.assertTrue((revisions / "v01_τρύπες-M6/Test_v01.f3d").is_file())
+        self.assertTrue((revisions / "v02_wider-base/Test_v02.f3d").is_file())
         recorded = next(iter(self.addin.store.data["contexts"].values()))
         self.assertTrue(Path(recorded["last_success_manifest"]).is_file())
         self.assertEqual(Path(recorded["last_success_manifest"]).parent.parent.name, "_Info")

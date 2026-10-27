@@ -25,15 +25,15 @@ Choose the project destination on your first export. After that, ZenExport remem
         📁 MyProjectFolder/
                 │
                 ├── CAD/
-                │   └── v05_M6 holes/
+                │   └── v05_M6-holes/
                 │       └── F3D + STEP
                 │
                 ├── Models/
-                │   └── v05_M6 holes/
+                │   └── v05_M6-holes/
                 │       └── STL files
                 │
                 └── _Info/
-                    └── v05_M6 holes/
+                    └── v05_M6-holes/
                         └── Preview + reports
 ```
 
@@ -70,16 +70,16 @@ API, available since May 2025. Live Fusion/Bambu size verification is still pend
 ```text
 MyProjectFolder/
 ├── CAD/
-│   └── v05_M6 holes/
+│   └── v05_M6-holes/
 │       ├── MyProject_v05.f3d
 │       ├── MyProject_v05.step
 │       └── Components/…
 ├── Models/
-│   └── v05_M6 holes/
+│   └── v05_M6-holes/
 │       └── Component/
 │           └── Body.stl
 └── _Info/
-    └── v05_M6 holes/
+    └── v05_M6-holes/
         ├── _preview.png
         ├── export_manifest.json
         └── export_events.jsonl
@@ -88,8 +88,8 @@ MyProjectFolder/
 **Same revision name. Matching CAD and printable parts.** 🧩
 
 The number preserves the sequence; your description explains the change. Greek
-descriptions work too. Unsafe filename characters are replaced and long folder
-descriptions are shortened; the full description remains in the report.
+descriptions work too. Spaces become hyphens, unsafe filename characters are replaced
+and long folder descriptions are shortened; the full description remains in the report.
 
 Descriptions apply to new revisions. A command for renaming existing revisions is
 not implemented yet. `_Info` also holds small helpers for numbering and migration;
@@ -136,8 +136,8 @@ The separate toolbar command does not require that platform-specific shortcut.
 With the description prompt enabled:
 
 ```text
-CTRL + S → “M6 holes”       → v05_M6 holes
-CTRL + S → “more clearance” → v06_more clearance
+CTRL + S → “M6 holes”       → v05_M6-holes
+CTRL + S → “more clearance” → v06_more-clearance
 ```
 
 Leave the description blank for a plain numbered revision. Cancel the prompt to
