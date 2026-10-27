@@ -69,7 +69,8 @@ def reserve_version(project_folder, revision_name=""):
                     match = _VERSION_NAME.fullmatch(entry.name)
                     if match:
                         maximum = max(maximum, int(match.group(1)))
-    description = sanitize_filename(revision_name, fallback="")[:60].rstrip(". _")
+    # Spaces need quoting in shells and escaping in links; the full note stays in the manifest.
+    description = re.sub(r"\s+", "-", sanitize_filename(revision_name, fallback=""))[:60].rstrip(". _-")
     number = maximum + 1
     while True:
         label = f"v{number:02d}"

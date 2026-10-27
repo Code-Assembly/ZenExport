@@ -66,7 +66,7 @@ class LayoutMigrationTests(unittest.TestCase):
             backups = list((root / "_Info/_Migration" / source.name).glob("export_manifest.json.*.bak"))
             self.assertEqual(backups[0].read_bytes(), original_report)
             self.assertEqual(migrate_project_layout(root)["moved"], 0)
-            self.assertEqual(reserve_version(root, "next change").name, "v05_next change")
+            self.assertEqual(reserve_version(root, "next change").name, "v05_next-change")
 
     def test_embedded_models_and_component_cad_in_old_cad_history_are_separated(self):
         with tempfile.TemporaryDirectory() as directory:
