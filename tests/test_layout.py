@@ -105,6 +105,16 @@ class LayoutMigrationTests(unittest.TestCase):
             self.assertTrue((root / "_Info/_Legacy_unversioned/_preview.png").is_file())
             self.assertFalse((root / "Models/v01").exists())
 
+    def test_flat_models_keep_loose_stls_in_place(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Models/Part").mkdir(parents=True)
+            (root / "Models/Body.stl").write_bytes(b"latest")
+            (root / "Models/Part/Body.stl").write_bytes(b"old-stl")
+            migrate_project_layout(root, flat_models=True)
+            self.assertEqual((root / "Models/Body.stl").read_bytes(), b"latest")
+            self.assertEqual((root / "Models/_Legacy_unversioned/Part/Body.stl").read_bytes(), b"old-stl")
+
     def test_report_path_escape_is_rejected_before_any_moves(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
